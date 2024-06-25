@@ -1,0 +1,1 @@
+cmd_/home/adv/git/xenomai/mydriver/Module.symvers := sed 's/ko$$/o/' /home/adv/git/xenomai/mydriver/modules.order | scripts/mod/modpost     -o /home/adv/git/xenomai/mydriver/Module.symvers -e -i Module.symvers   -T -

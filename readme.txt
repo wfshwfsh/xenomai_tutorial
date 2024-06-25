@@ -1,8 +1,12 @@
-reference code:
 
-1. https://github.com/claudioscordino/rpi3-xenomai.git
-...
+# RTDM TEST LIST
+* R/W to rtdm driver
+* ioctl to rtdmtest driver => ioctl_rt/ioctl_nrt
+* thread/rt_thread to call ioctl
+* actor rtdmtest_driver
+* signal(sem)
 
-ISSUE:
-1. if we include xenomai pthread.h from kernel module, it will makes conflict between toolchain and glibc 
-...
+# Question TO Check
+* Which function will be called ioctl_rt() or ioctl_nrt() when application calling ioctl()?
+
+
