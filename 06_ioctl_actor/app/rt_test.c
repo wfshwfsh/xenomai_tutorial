@@ -21,12 +21,13 @@
 #define TASK_MODE 0 // No flags
 #define TASK_STKSZ 0 // default Stack size
 
-#define TASK_PERIOD (10*1000*1000) // 0.5= 50,000,000 ns
+#define TASK_PERIOD (1000*1000*1000) // 0.5= 50,000,000 ns
 
 
 
 #define DEV_BASIC0	"rtdm0"
 #define DEV_BASIC1	"rtdm1"
+#define DEV_ACTOR	"rtdmx"
 
 
 #define RTTST_RTDM_DEFER_CLOSE_CONTEXT   1
@@ -49,13 +50,15 @@
 
 
 
-static int dev[2], ret[2];
+static int dev, ret;
 
 void periodic_task (void *arg) {
     
     int cnt=0, err, from_drv;
     long diff=0;
     RTIME now, previous;
+    char *devName = (char *)arg;
+    
     previous= rt_timer_read();
     printf("before XENO loop:\n");
     
@@ -66,40 +69,43 @@ void periodic_task (void *arg) {
     //getchar();
 
     /* open the device */
-    dev[0] = rt_dev_open(DEV_BASIC0, 0);
-    dev[1] = rt_dev_open(DEV_BASIC1, 0);
+    dev = rt_dev_open(devName, 0);
     
-    if (dev[0] < 0 || dev[1] < 0) {
-        printf("ERROR : can't open device %s (%s) or device %s (%s)\n",
-               DEV_BASIC0, strerror(-dev[0]), 
-               DEV_BASIC1, strerror(-dev[1]));
+    if (dev < 0) {
+        rt_printf("ERROR : can't open device %s (%s)\n",
+                    devName, strerror(-dev));
         fflush(stdout);
-        return;
+        exit(1);
     }
     
-    rt_printf("open sucess %d %d \n", dev[0], dev[1]);
+    rt_printf("open sucess %d \n", dev);
 
     for (;;) {
+        if((0 == strcmp(devName, DEV_BASIC0))
+            || (0 == strcmp(devName, DEV_BASIC1))){
+            
+            //err = rt_dev_ioctl (dev, RTTST_RTIOC_RTDM_PING_PRIMARY, &from_drv);
+            err = rt_dev_ioctl (dev, RTTST_RTIOC_RTDM_PING_SECONDARY, &from_drv);
+            err = rt_dev_ioctl (dev, RTTST_RTIOC_RTDM_DEFER_CLOSE, RTTST_RTDM_DEFER_CLOSE_CONTEXT);
+            
+	}else if(0 == strcmp(devName, DEV_ACTOR)){
+            
+            err = rt_dev_ioctl (dev, RTTST_RTIOC_RTDM_ACTOR_GET_CPU, &from_drv);
+        }
         
-        err = rt_dev_ioctl (dev[0], RTTST_RTIOC_RTDM_PING_PRIMARY, &from_drv);
-        //rt_printf("from_drv 0x%0x \n", from_drv);
-        //err = rt_dev_ioctl (dev[0], RTTST_RTIOC_RTDM_PING_SECONDARY, &from_drv);
         rt_printf("from_drv 0x%0x \n", from_drv);
-        //err = rt_dev_ioctl (dev[0], RTTST_RTIOC_RTDM_DEFER_CLOSE, RTTST_RTDM_DEFER_CLOSE_CONTEXT);
-        
         //task migrates to primary mode with xeno API call
         rt_task_wait_period(NULL); //deschedule until next period.
-	//usleep(TASK_PERIOD/1000);
         now = rt_timer_read(); //cureent time
     
         //task migrates to secondary mode with syscall
         //so printf may have unexpected impact on the timing
         diff = now - previous;
         
-        if(diff > 1.5*TASK_PERIOD)
+        if(diff > 1.2*TASK_PERIOD)
 	        rt_printf("Time elapsed: %ld.%04ld ms\n",
-                    (long)diff / 1000000,
-                    (long)diff % 1000000);
+                        (long)diff / 1000000,
+                        (long)diff % 1000000);
         
         previous = now;
     }
@@ -110,6 +116,9 @@ int main (int argc, char *argv[])
     int e1=0, e2, e3=0, e4;
     RT_TIMER_INFO info;
     RT_TASK tA;
+    char dev_rtdm[]=DEV_BASIC0;
+    //char dev_rtdm[]=DEV_BASIC1;
+    //char dev_rtdm[]=DEV_ACTOR;
     
     mlockall(MCL_CURRENT|MCL_FUTURE);
     
@@ -119,7 +128,7 @@ int main (int argc, char *argv[])
     
     //set period
     //e3 = rt_task_set_periodic(&tA, TM_NOW, rt_timer_ns2ticks(TASK_PERIOD));
-    e4 = rt_task_start(&tA, &periodic_task, NULL); 
+    e4 = rt_task_start(&tA, &periodic_task, dev_rtdm); 
     
     if (e1 | e2 | e3 | e4) {
         fprintf(stderr, "Error launching periodic task....\n");
@@ -132,14 +141,12 @@ int main (int argc, char *argv[])
     rt_task_delete(&tA);
     
     /* close the device */
-    ret[0] = rt_dev_close(dev[0]);
-    ret[1] = rt_dev_close(dev[1]);
-    if (ret[0] < 0 || ret[1] < 0) {
-        printf("ERROR : can't open device %s (%s) or device %s (%s)\n",
-               DEV_BASIC0, strerror(-ret[0]), 
-               DEV_BASIC1, strerror(-ret[1]));
+    ret = rt_dev_close(dev);
+    if (ret < 0) {
+        printf("ERROR : can't open device %s (%s)\n",
+               DEV_BASIC0, strerror(-ret));
         fflush(stdout);
-        return;
+        return ret;
     }
 
     return 0;
