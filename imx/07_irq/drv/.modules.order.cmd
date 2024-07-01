@@ -1,0 +1,1 @@
+cmd_/home/will/git/xeno/xenomai_tutorial/imx/07_irq/drv/modules.order := {   echo /home/will/git/xeno/xenomai_tutorial/imx/07_irq/drv/mydriver.ko; :; } | awk '!x[$$0]++' - > /home/will/git/xeno/xenomai_tutorial/imx/07_irq/drv/modules.order

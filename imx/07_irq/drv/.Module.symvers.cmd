@@ -1,0 +1,1 @@
+cmd_/home/will/git/xeno/xenomai_tutorial/imx/07_irq/drv/Module.symvers := sed 's/ko$$/o/' /home/will/git/xeno/xenomai_tutorial/imx/07_irq/drv/modules.order | scripts/mod/modpost -m    -o /home/will/git/xeno/xenomai_tutorial/imx/07_irq/drv/Module.symvers -e -i Module.symvers   -T -
