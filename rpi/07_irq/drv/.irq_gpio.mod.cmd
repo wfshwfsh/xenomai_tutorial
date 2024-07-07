@@ -1,0 +1,1 @@
+cmd_/home/will/git/xeno/xenomai_tutorial/07_irq/drv/irq_gpio.mod := { echo  /home/will/git/xeno/xenomai_tutorial/07_irq/drv/irq_gpio.o;  echo; } > /home/will/git/xeno/xenomai_tutorial/07_irq/drv/irq_gpio.mod

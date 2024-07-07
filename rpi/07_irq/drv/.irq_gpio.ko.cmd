@@ -1,0 +1,1 @@
+cmd_/home/will/git/xeno/xenomai_tutorial/07_irq/drv/irq_gpio.ko := aarch64-linux-gnu-ld -r  -EL  -maarch64elf  --build-id=sha1  -T scripts/module.lds -o /home/will/git/xeno/xenomai_tutorial/07_irq/drv/irq_gpio.ko /home/will/git/xeno/xenomai_tutorial/07_irq/drv/irq_gpio.o /home/will/git/xeno/xenomai_tutorial/07_irq/drv/irq_gpio.mod.o;  true
