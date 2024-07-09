@@ -1,48 +1,48 @@
+###### CONFIGURATION ######
 CROSS_COMPILE := aarch64-linux-gnu-
 CC := $(CROSS_COMPILE)gcc
-INSTALL_XENO=/usr/xenomai
 
-XENO_CONFIG := /usr/xenomai/bin/xeno-config
+### List of applications to be build
+APPLICATIONS = mydrivertest rt_test
 
-CFLAGS_XENOCFG = $(shell $(XENO_CONFIG) --skin=alchemy --cflags)
-LDFLAGS_XENOCFG = $(shell $(XENO_CONFIG) --skin=alchemy --ldflags)
+### Note: to override the search path for the xeno-config script, use "make XENO=..."
 
-CFLAGS+=-I$(INSTALL_XENO)/include -I$(INSTALL_XENO)/include/cobalt
-#CFLAGS+=-I/usr/include/x86_64-linux-gnu/
 
-LDFLAGS+= -L$(INSTALL_XENO)/lib -ltrank -lalchemy -lcobalt
-CC_FLAGS= -Wall -D_GNU_SOURCE -D_REENTRANT -mtune=cortex-a53
 
-#CROSS_COMPILE?=/opt/fsl-imx-wayland/4.14-sumo/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-
-#CC?=$(CROSS_COMPILE)gcc --sysroot=/opt/fsl-imx-wayland/4.14-sumo/sysroots/aarch64-poky-linux
 
-OBJS_C=main.c
-OBJS_O=$(patsubst %.c,%.o,$(OBJS_C) )
-OBJS_ELF=$(patsubst %.c,%.elf,$(OBJS_C) )
-TAR=main.app
 
-##############################################################
-all: build
-	
-build2:
-	$(CC) -c $(OBJS_C) $(LDFLAGS) $(CFLAGS) $(CC_FLAGS) $(CFLAGS_XENOCFG)
-	$(LD) $(OBJS_O) -o $(OBJS_ELF) $(LDFLAGS) $(LDFLAGS_XENOCFG)
-	#$(OBJCOPY) -O binary -S $(OBJS_ELF) $(TAR)
+###### USER SPACE BUILD (no change required normally) ######
+ifneq ($(APPLICATIONS),)
 
-build:
-	$(CC) $(OBJS_C) -o $(TAR) $(LDFLAGS) $(CFLAGS) $(CC_FLAGS) $(CFLAGS_XENOCFG) $(LDFLAGS_XENOCFG)
+### Default Xenomai installation path
+XENO ?= /usr/xenomai
 
-clean:
-	rm -f *.app *.o
+XENOCONFIG=$(shell PATH=$(XENO):$(XENO)/bin:$(PATH) which xeno-config 2>/dev/null)
 
-check_inc:
-	$(CC) -print-search-dirs
+### Sanity check
+ifeq ($(XENOCONFIG),)
+all::
+	@echo ">>> Invoke make like this: \"make XENO=/path/to/xeno-config\" <<<"
+	@echo
+endif
 
-install:
-	cp -f $(TAR) /nfsshare/
 
-help:
-	@echo $(CC)
+CC=$(shell $(XENOCONFIG) --cc)
 
-help_cflags:
-	@echo $(CFLAGS)
+CFLAGS=$(shell $(XENOCONFIG) --skin=native --cflags) $(MY_CFLAGS)
+
+LDFLAGS=$(MY_LDFLAGS)
+LDLIBS=$(shell $(XENOCONFIG) --skin=native --ldflags)
+#LDLIBS+=$(shell $(XENOCONFIG) --skin=rtdm --ldflags)
+
+# This includes the library path of given Xenomai into the binary to make live
+# easier for beginners if Xenomai's libs are not in any default search path.
+LDFLAGS+=-Xlinker -rpath -Xlinker $(shell $(XENOCONFIG) --libdir)
+
+all:: $(APPLICATIONS)
+
+clean::
+	$(RM) $(APPLICATIONS) *.o
+
+endif
+
