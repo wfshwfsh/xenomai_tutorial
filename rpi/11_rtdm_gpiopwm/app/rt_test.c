@@ -15,9 +15,20 @@
 #include <trank/native/timer.h>
 #include <trank/native/task.h>
 #include <rtdm/rtdm.h>
-
+#include <rtdm/uapi/gpiopwm.h>
 
 #define DEV_GPIOPWM "/dev/rtdm/gpiopwm"
+
+#define GPIO_PWM_SERVO_CONFIG			\
+{						\
+	.duty_cycle	=	10,		\
+	.range_min	=	950,		\
+	.range_max	=	2050,		\
+	.period		=	20000000,	\
+	.gpio		=	22,		\
+}
+
+static struct gpiopwm config = GPIO_PWM_SERVO_CONFIG;
 
 static int dev, ret;
 
@@ -44,8 +55,20 @@ int main (int argc, char *argv[])
         exit(1);
     }
     
-    //err = rt_dev_ioctl (dev, RTTST_RTIOC_RTDM_ACTOR_GET_CPU, &from_drv);
-
+	printf("press to set config\n");
+	getchar();
+    err = rt_dev_ioctl (dev, GPIOPWM_RTIOC_SET_CONFIG, &config);
+	
+	printf("press to start pwm\n");
+	getchar();
+	err = rt_dev_ioctl (dev, GPIOPWM_RTIOC_START, NULL);
+	
+	printf("press to stop pwm\n");
+	getchar();
+	err = rt_dev_ioctl (dev, GPIOPWM_RTIOC_STOP, NULL);
+	
+	printf("press to close pwm\n");
+	getchar();
     /* close the device */
     ret = rt_dev_close(dev);
     if (ret < 0) {
