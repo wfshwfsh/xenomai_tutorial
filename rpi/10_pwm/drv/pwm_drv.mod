@@ -1,0 +1,2 @@
+/home/adv/git/xenomai_tutorial/rpi/10_pwm/drv/pwm_drv.o
+

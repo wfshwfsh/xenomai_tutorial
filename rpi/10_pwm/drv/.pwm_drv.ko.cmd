@@ -1,0 +1,1 @@
+cmd_/home/adv/git/xenomai_tutorial/rpi/10_pwm/drv/pwm_drv.ko := aarch64-linux-gnu-ld -r -EL  -maarch64elf --build-id=sha1  -T scripts/module.lds -o /home/adv/git/xenomai_tutorial/rpi/10_pwm/drv/pwm_drv.ko /home/adv/git/xenomai_tutorial/rpi/10_pwm/drv/pwm_drv.o /home/adv/git/xenomai_tutorial/rpi/10_pwm/drv/pwm_drv.mod.o;  true

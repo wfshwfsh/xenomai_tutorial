@@ -1,0 +1,1 @@
+cmd_/home/adv/git/xenomai_tutorial/rpi/10_pwm/drv/Module.symvers := sed 's/ko$$/o/' /home/adv/git/xenomai_tutorial/rpi/10_pwm/drv/modules.order | scripts/mod/modpost -m -a   -o /home/adv/git/xenomai_tutorial/rpi/10_pwm/drv/Module.symvers -e -i Module.symvers   -T -
