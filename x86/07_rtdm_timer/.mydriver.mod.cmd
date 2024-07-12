@@ -1,0 +1,1 @@
+cmd_/home/adv/git/xenomai_tutorial/x86/07_rtdm_timer/mydriver.mod := { echo  /home/adv/git/xenomai_tutorial/x86/07_rtdm_timer/mydriver.o;  echo; } > /home/adv/git/xenomai_tutorial/x86/07_rtdm_timer/mydriver.mod
