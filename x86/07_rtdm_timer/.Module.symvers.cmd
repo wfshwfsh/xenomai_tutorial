@@ -1,0 +1,1 @@
+cmd_/home/adv/git/xenomai_tutorial/x86/07_rtdm_timer/Module.symvers := sed 's/ko$$/o/' /home/adv/git/xenomai_tutorial/x86/07_rtdm_timer/modules.order | scripts/mod/modpost -m -a   -o /home/adv/git/xenomai_tutorial/x86/07_rtdm_timer/Module.symvers -e -i Module.symvers   -T -

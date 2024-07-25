@@ -1,0 +1,1 @@
+cmd_/home/adv/git/xenomai_tutorial/x86/07_rtdm_timer/modules.order := {   echo /home/adv/git/xenomai_tutorial/x86/07_rtdm_timer/mydriver.ko; :; } | awk '!x[$$0]++' - > /home/adv/git/xenomai_tutorial/x86/07_rtdm_timer/modules.order
