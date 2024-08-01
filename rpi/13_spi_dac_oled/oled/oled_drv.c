@@ -68,7 +68,7 @@ static void dc_pin_init(void)
 	gpiod_direction_output(dc_gpio, 1);
 }
 
-#if 1
+#if 0
 //100ask flow
 static void oled_init(void)
 {
@@ -125,8 +125,8 @@ static void oled_init(void)
 	//init setting
 	
 	//
-	oled_write_cmd_data(0x00,OLED_CMD);
-	oled_write_cmd_data(0x10,OLED_CMD);
+	//oled_write_cmd_data(0x00,OLED_CMD);
+	//oled_write_cmd_data(0x10,OLED_CMD);
 	
 	
 	//set sidplay clock divide ration/oscilator freq
@@ -145,7 +145,7 @@ static void oled_init(void)
 	oled_write_cmd_data(0x40,OLED_CMD);
 	
 	//
-	oled_write_cmd_data(0xB0,OLED_CMD);
+	//oled_write_cmd_data(0xB0,OLED_CMD);
 	
 	
 	//charge pump
@@ -232,6 +232,7 @@ static ssize_t spidev_write(struct file *filp, const char __user *buf,
 	err = copy_from_user(kbuf, buf, count);
 	
 	//spi_write_datas
+	oled_set_dc_pin(1);
 	spi_write_datas(kbuf, count);
 	
 	kfree(kbuf);

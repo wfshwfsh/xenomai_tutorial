@@ -1,6 +1,14 @@
 *.o 
 *.ko
+*.mod
+*.mod.o
 *.mod.c
+*.o.cmd
+
+.*.ko.cmd
+.*.mod.cmd
+.*.o.cmd
+
 Module*.symvers 
 Module.markers 
 modules.order

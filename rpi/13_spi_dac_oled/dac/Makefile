@@ -16,12 +16,12 @@ KERN_DIR = /home/adv/git/rpi-linux
 
 all:
 	ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) make -C $(KERN_DIR) M=`pwd` modules 
-	$(CROSS_COMPILE)gcc -o spi_oled spi_oled.c
+	$(CROSS_COMPILE)gcc -o dac_test dac_test.c
 
 clean:
 	ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) make -C $(KERN_DIR) M=`pwd` modules clean
-	rm -rf modules.order spi_oled
+	rm -rf modules.order dac_test
 
-MODULE = oled_drv
+MODULE = dac_drv
 obj-m	+= $(MODULE).o
 

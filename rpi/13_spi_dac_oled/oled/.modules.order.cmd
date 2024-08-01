@@ -1,1 +1,0 @@
-cmd_/home/will/git/xeno/xenomai_tutorial/rpi/13_spi_dac_oled/oled/modules.order := {   echo /home/will/git/xeno/xenomai_tutorial/rpi/13_spi_dac_oled/oled/oled_drv.ko; :; } | awk '!x[$$0]++' - > /home/will/git/xeno/xenomai_tutorial/rpi/13_spi_dac_oled/oled/modules.order

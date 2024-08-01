@@ -190,9 +190,17 @@ int main(int argc, char **argv)
 	ioctl(fd_spidev, OLED_IOC_INIT);
 
 	OLED_DIsp_Clear();
-	//OLED_DIsp_All();
 	
-	//OLED_DIsp_Clear();
+	printf("press to disp all\n");
+	getchar();
+	OLED_DIsp_All();
+	
+	printf("press to clear all\n");
+        getchar();
+	OLED_DIsp_Clear();
+	
+	printf("press to disp test\n");
+        getchar();
 	OLED_DIsp_Test();
 
 	return 0;
