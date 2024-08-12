@@ -1,0 +1,1 @@
+/home/adv/git/xenomai_rpi/xenomai/include/cobalt/kernel/rtdm/analogy/channel_range.h
