@@ -1,0 +1,1 @@
+cmd_/home/adv/work/xenotest/xmmap/Module.symvers := sed 's/ko$$/o/' /home/adv/work/xenotest/xmmap/modules.order | scripts/mod/modpost -m -a   -o /home/adv/work/xenotest/xmmap/Module.symvers -e -i Module.symvers   -T -
