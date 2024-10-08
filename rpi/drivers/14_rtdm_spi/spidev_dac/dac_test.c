@@ -82,7 +82,7 @@ int rt_spidev_init(const char *devName)
     }
 #endif
 #if 1
-    config.mode = SPI_MODE_0;
+    config.mode = SPI_MODE_3;
     config.bits_per_word = 8;
     config.speed_hz = speed_hz;
 
