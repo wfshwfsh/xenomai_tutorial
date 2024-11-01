@@ -1,1 +1,12 @@
-/home/adv/git/xenomai_rpi/xenomai/kernel/cobalt/arch/arm64/Kconfig
+source "kernel/xenomai/Kconfig"
+source "drivers/xenomai/Kconfig"
+
+config XENO_ARCH_FPU
+	def_bool y
+
+config XENO_ARCH_SYS3264
+        def_bool n
+
+config XENO_ARCH_OUTOFLINE_XNLOCK
+       bool
+       default y

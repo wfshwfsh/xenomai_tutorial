@@ -1,1 +1,4 @@
-/home/adv/git/xenomai_rpi/xenomai/kernel/drivers/autotune/Makefile
+
+obj-$(CONFIG_XENO_DRIVERS_AUTOTUNE) += xeno_autotune.o
+
+xeno_autotune-y := autotune.o

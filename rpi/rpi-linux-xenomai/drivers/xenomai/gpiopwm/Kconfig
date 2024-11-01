@@ -1,1 +1,9 @@
-/home/adv/git/xenomai_rpi/xenomai/kernel/drivers/gpiopwm/Kconfig
+menu "GPIOPWM support"
+
+config XENO_DRIVERS_GPIOPWM
+	tristate "GPIOPWM driver"
+	help
+
+	An RTDM-based GPIO PWM generator driver
+
+endmenu

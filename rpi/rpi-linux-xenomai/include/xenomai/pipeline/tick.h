@@ -1,1 +1,16 @@
-/home/adv/git/xenomai_rpi/xenomai/include/cobalt/kernel/dovetail/pipeline/tick.h
+/*
+ * SPDX-License-Identifier: GPL-2.0
+ */
+
+#ifndef _COBALT_KERNEL_IPIPE_TICK_H
+#define _COBALT_KERNEL_IPIPE_TICK_H
+
+int pipeline_install_tick_proxy(void);
+
+void pipeline_uninstall_tick_proxy(void);
+
+struct xnsched;
+
+bool pipeline_must_force_program_tick(struct xnsched *sched);
+
+#endif /* !_COBALT_KERNEL_IPIPE_TICK_H */

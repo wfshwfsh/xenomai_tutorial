@@ -1,1 +1,5 @@
-/home/adv/git/xenomai_rpi/xenomai/kernel/drivers/analogy/sensoray/Kconfig
+
+config XENO_DRIVERS_ANALOGY_S526
+	depends on XENO_DRIVERS_ANALOGY
+	tristate "Sensoray Model 526 driver"
+	default n

@@ -1,1 +1,3 @@
-/home/adv/git/xenomai_rpi/xenomai/kernel/drivers/autotune/Kconfig
+
+config XENO_DRIVERS_AUTOTUNE
+	tristate

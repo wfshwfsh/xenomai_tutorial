@@ -1,1 +1,5 @@
-/home/adv/git/xenomai_rpi/xenomai/kernel/drivers/udd/Makefile
+ccflags-y += -I$(srctree)/kernel
+
+obj-$(CONFIG_XENO_DRIVERS_UDD) += xeno_udd.o
+
+xeno_udd-y := udd.o

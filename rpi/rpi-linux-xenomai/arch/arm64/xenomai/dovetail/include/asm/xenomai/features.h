@@ -1,1 +1,15 @@
-/home/adv/git/xenomai_rpi/xenomai/kernel/cobalt/arch/arm64/dovetail/include/asm/xenomai/features.h
+/*
+ * SPDX-License-Identifier: GPL-2.0
+ *
+ * Copyright (C) 2015 Philippe Gerum  <rpm@xenomai.org>
+ */
+
+#ifndef _COBALT_ARM64_DOVETAIL_FEATURES_H
+#define _COBALT_ARM64_DOVETAIL_FEATURES_H
+
+struct cobalt_featinfo;
+static inline void collect_arch_features(struct cobalt_featinfo *p) { }
+
+#include <asm/xenomai/uapi/features.h>
+
+#endif /* !_COBALT_ARM64_DOVETAIL_FEATURES_H */

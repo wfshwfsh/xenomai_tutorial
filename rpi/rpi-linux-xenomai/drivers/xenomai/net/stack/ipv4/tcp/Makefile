@@ -1,1 +1,7 @@
-/home/adv/git/xenomai_rpi/xenomai/kernel/drivers/net/stack/ipv4/tcp/Makefile
+ccflags-y += -I$(srctree)/drivers/xenomai/net/stack/include
+
+obj-$(CONFIG_XENO_DRIVERS_NET_RTIPV4_TCP) += rttcp.o
+
+rttcp-y := \
+	tcp.o \
+	timerwheel.o

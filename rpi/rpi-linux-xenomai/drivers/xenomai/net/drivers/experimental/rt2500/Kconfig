@@ -1,1 +1,4 @@
-/home/adv/git/xenomai_rpi/xenomai/kernel/drivers/net/drivers/experimental/rt2500/Kconfig
+config XENO_DRIVERS_NET_DRV_RT2500
+    depends on XENO_DRIVERS_NET && PCI
+    tristate "Ralink 2500 WLAN"
+    select XENO_DRIVERS_NET_RTWLAN

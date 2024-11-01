@@ -1,1 +1,1 @@
-/home/adv/git/xenomai_rpi/xenomai/kernel/cobalt/include/linux/stdarg.h
+#include <stdarg.h>

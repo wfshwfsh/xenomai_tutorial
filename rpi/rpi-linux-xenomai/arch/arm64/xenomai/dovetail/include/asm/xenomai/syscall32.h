@@ -1,1 +1,12 @@
-/home/adv/git/xenomai_rpi/xenomai/kernel/cobalt/arch/arm64/dovetail/include/asm/xenomai/syscall32.h
+/*
+ * SPDX-License-Identifier: GPL-2.0
+ *
+ * Copyright (C) 2014 Philippe Gerum  <rpm@xenomai.org>
+ */
+
+#ifndef _COBALT_ARM64_DOVETAIL_SYSCALL32_H
+#define _COBALT_ARM64_DOVETAIL_SYSCALL32_H
+
+#include <asm-generic/xenomai/syscall32.h>
+
+#endif /* !_COBALT_ARM64_DOVETAIL_SYSCALL32_H */

@@ -1,1 +1,5 @@
-/home/adv/git/xenomai_rpi/xenomai/kernel/cobalt/arch/arm64/dovetail/Makefile
+obj-$(CONFIG_XENOMAI) += xenomai.o
+
+xenomai-y := machine.o
+
+ccflags-y := -I$(srctree)/arch/arm64/xenomai/include -I$(srctree)/include/xenomai
