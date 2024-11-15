@@ -295,7 +295,8 @@ static void pl011_write(unsigned int val, const struct uart_amba_port *uap,
 	unsigned int reg)
 {
 	void __iomem *addr = uap->port.membase + pl011_reg_to_offset(uap, reg);
-
+    pr_info("Writing to reg[%d], value: 0x%x\n", reg, val);
+    
 	if (uap->port.iotype == UPIO_MEM32)
 		writel_relaxed(val, addr);
 	else
@@ -1506,7 +1507,8 @@ static irqreturn_t pl011_int(int irq, void *dev_id)
 	unsigned long flags;
 	unsigned int status, pass_counter = AMBA_ISR_PASS_LIMIT;
 	int handled = 0;
-
+    printk("pl011_int enter");
+    
 	spin_lock_irqsave(&uap->port.lock, flags);
 	uap->irq_locked = 1;
 	status = pl011_read(uap, REG_RIS) & uap->im;
@@ -1540,6 +1542,7 @@ static irqreturn_t pl011_int(int irq, void *dev_id)
 
 	spin_unlock_irqrestore(&uap->port.lock, flags);
 
+    printk("pl011_int leave");
 	return IRQ_RETVAL(handled);
 }
 
@@ -1808,7 +1811,7 @@ static int pl011_startup(struct uart_port *port)
 	if (retval)
 		goto clk_dis;
 
-	retval = pl011_allocate_irq(uap);
+	//retval = pl011_allocate_irq(uap);
 	if (retval)
 		goto clk_dis;
 
@@ -1919,7 +1922,7 @@ static void pl011_shutdown(struct uart_port *port)
 
 	pl011_dma_shutdown(uap);
 
-	free_irq(uap->port.irq, uap);
+	//free_irq(uap->port.irq, uap);
 
 	pl011_disable_uart(uap);
 
@@ -2641,7 +2644,8 @@ static int pl011_setup_port(struct device *dev, struct uart_amba_port *uap,
 	   doesn't use this logic, so always remains ttyS0.
 	index = pl011_probe_dt_alias(index, dev);
 	*/
-
+    
+    printk("uart[%d] mapbase:phy_addr=0x%08llx", index, mmiobase->start);
 	uap->old_cr = 0;
 	uap->port.dev = dev;
 	uap->port.mapbase = mmiobase->start;
@@ -2713,6 +2717,7 @@ static int pl011_probe(struct amba_device *dev, const struct amba_id *id)
 	uap->port.iotype = vendor->access_32b ? UPIO_MEM32 : UPIO_MEM;
 	uap->port.irq = dev->irq[0];
 	uap->port.ops = &amba_pl011_pops;
+    printk("UART[%d] irq = %d\n", id->id, dev->irq[0]);
 
 	snprintf(uap->type, sizeof(uap->type), "PL011 rev%u", amba_rev(dev));
 

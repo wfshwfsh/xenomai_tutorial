@@ -31,6 +31,11 @@
 
 #include "amba-pl011.h"
 
+MODULE_AUTHOR("Will Chen <Will8.Chen@advantech.com.tw>");
+MODULE_DESCRIPTION("RTDM-based driver for BCM PL011 UARTs");
+MODULE_VERSION("1.0.0");
+MODULE_LICENSE("GPL");
+
 #define UART_NR			14
 
 #define SERIAL_AMBA_MAJOR	204
@@ -43,9 +48,21 @@
 #define UART_DUMMY_DR_RX	(1 << 16)
 
 
-#define TX_FIFO_SIZE		32
 #define IN_BUFFER_SIZE		4096
 #define OUT_BUFFER_SIZE		4096
+
+#define TX_FIFO_SIZE		32
+
+#define PARITY_MASK		0x03
+#define DATA_BITS_MASK		0x03
+#define STOP_BITS_MASK		0x01
+#define FIFO_MASK		0xC0
+#define EVENT_MASK		0x0F
+
+#define IER_RX			0x01
+#define IER_TX			0x02
+#define IER_STAT		0x04
+#define IER_MODEM		0x08
 
 
 #define RT_PL011_UART_MAX	5
@@ -191,8 +208,10 @@ static struct vendor_data vendor_zte = {
 };
 
 
-struct rt_uart_amba_port {
-
+struct rt_amba_uart_port {
+    
+    struct device *dev;
+    
 	unsigned char __iomem *membase;	/* read/write[bwl] */
 	resource_size_t mapbase;	/* for ioremap */
 	unsigned int irq;		/* irq number */
@@ -202,8 +221,11 @@ struct rt_uart_amba_port {
 	unsigned int use_dcedte;
 	unsigned int use_hwflow;
 	
+    unsigned int status;
+    
 	const u16		*reg_offset;
 	struct clk		*clk;
+    unsigned int    uartclk;
 	const struct vendor_data *vendor;
 	unsigned int		dmacr;		/* dma control reg */
 	unsigned int		im;		/* interrupt mask */
@@ -218,7 +240,7 @@ struct rt_uart_amba_port {
 	struct rtdm_device rtdm_dev;
 };
 
-struct rt_imx_uart_ctx {
+struct rt_amba_uart_ctx {
 	struct rtser_config config;	/* current device configuration */
 
 	rtdm_irq_t irq_handle;		/* device IRQ handle */
@@ -255,19 +277,19 @@ struct rt_imx_uart_ctx {
 	 * The port structure holds all the information about the UART
 	 * port like base address, and so on.
 	 */
-	struct rt_uart_amba_port *port;
+	struct rt_amba_uart_port *port;
 };
 
-static struct rt_uart_amba_port *amba_ports[UART_NR];
+static struct rt_amba_uart_port *amba_ports[UART_NR];
 
 
-static unsigned int pl011_reg_to_offset(const struct rt_uart_amba_port *uap,
+static unsigned int pl011_reg_to_offset(const struct rt_amba_uart_port *uap,
 	unsigned int reg)
 {
 	return uap->reg_offset[reg];
 }
 
-static unsigned int pl011_read(const struct rt_uart_amba_port *uap,
+static unsigned int pl011_read(const struct rt_amba_uart_port *uap,
 	unsigned int reg)
 {
 	void __iomem *addr = uap->membase + pl011_reg_to_offset(uap, reg);
@@ -276,11 +298,13 @@ static unsigned int pl011_read(const struct rt_uart_amba_port *uap,
 		readl_relaxed(addr) : readw_relaxed(addr);
 }
 
-static void pl011_write(unsigned int val, const struct rt_uart_amba_port *uap,
+static void pl011_write(unsigned int val, const struct rt_amba_uart_port *uap,
 	unsigned int reg)
 {
 	void __iomem *addr = uap->membase + pl011_reg_to_offset(uap, reg);
-
+    
+    pr_info("Writing to reg[%d], value: 0x%x\n", reg, val);
+    
 	if (uap->iotype == UPIO_MEM32)
 		writel_relaxed(val, addr);
 	else
@@ -288,53 +312,25 @@ static void pl011_write(unsigned int val, const struct rt_uart_amba_port *uap,
 }
 
 
-/* unregisters the driver also if no more ports are left */
-static void pl011_unregister_port(struct rt_uart_amba_port *uap)
-{
-	int i;
-	bool busy = false;
-
-	for (i = 0; i < ARRAY_SIZE(amba_ports); i++) {
-		if (amba_ports[i] == uap)
-			amba_ports[i] = NULL;
-		else if (amba_ports[i])
-			busy = true;
-	}
-//TBD	pl011_dma_remove(uap);
-	//if (!busy)
-	//	uart_unregister_driver(&amba_reg);
-}
-
-static int pl011_find_free_port(void)
-{
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(amba_ports); i++)
-		if (amba_ports[i] == NULL)
-			return i;
-
-	return -EBUSY;
-}
-
-static int pl011_setup_port(struct device *dev, struct rt_uart_amba_port *uap,
+static int pl011_setup_port(struct device *dev, struct rt_amba_uart_port *uap,
 			    struct resource *mmiobase, int index)
 {
 	void __iomem *base;
 	
-	//TBD - dev: struct rtdm_device
 	base = devm_ioremap_resource(dev, mmiobase);
 	if (IS_ERR(base))
 		return PTR_ERR(base);
-
+    
 	/* Don't use DT serial<n> aliases - it causes the device to
 	   be renumbered to ttyAMA1 if it is the second serial port in the
 	   system, even though the other one is ttyS0. The 8250 driver
 	   doesn't use this logic, so always remains ttyS0.
-	index = pl011_probe_dt_alias(index, dev);
+	   index = pl011_probe_dt_alias(index, dev);
 	*/
-
+    
+    printk("uart[%d] mapbase:phy_addr=0x%08llx", index, mmiobase->start);
 	uap->old_cr = 0;
-	//uap->port.dev = dev;
+	uap->dev = dev;
 	uap->mapbase = mmiobase->start;
 	uap->membase = base;
 	//uap->port.fifosize = uap->fifosize;
@@ -343,11 +339,10 @@ static int pl011_setup_port(struct device *dev, struct rt_uart_amba_port *uap,
 	//uap->port.line = index;
 
 	amba_ports[index] = uap;
-
 	return 0;
 }
 
-static int pl011_register_port(struct rt_uart_amba_port *uap)
+static int pl011_register_port(struct rt_amba_uart_port *uap)
 {
 	int ret=0;
 
@@ -374,46 +369,1123 @@ static int pl011_register_port(struct rt_uart_amba_port *uap)
 	return ret;
 }
 
+/* unregisters the driver also if no more ports are left */
+static void pl011_unregister_port(struct rt_amba_uart_port *uap)
+{
+	int i;
+	bool busy = false;
 
+	for (i = 0; i < ARRAY_SIZE(amba_ports); i++) {
+		if (amba_ports[i] == uap)
+			amba_ports[i] = NULL;
+		else if (amba_ports[i])
+			busy = true;
+	}
+//TBD	pl011_dma_remove(uap);
+	//if (!busy)
+	//	uart_unregister_driver(&amba_reg);
+}
+
+static int pl011_find_free_port(void)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(amba_ports); i++)
+		if (amba_ports[i] == NULL)
+			return i;
+
+	return -EBUSY;
+}
+
+
+
+
+static int pl011_hwinit(struct rt_amba_uart_port *port)
+{
+	int retval;
+
+	/* Optionaly enable pins to be muxed in and configured */
+	pinctrl_pm_select_default_state(port->dev);
+
+	/*
+	 * Try to enable the clock producer.
+	 */
+	retval = clk_prepare_enable(port->clk);
+	if (retval)
+		return retval;
+    
+	port->uartclk = clk_get_rate(port->clk);
+
+	/* Clear pending error and receive interrupts */
+	pl011_write(UART011_OEIS | UART011_BEIS | UART011_PEIS |
+		    UART011_FEIS | UART011_RTIS | UART011_RXIS,
+		    port, REG_ICR);
+
+	/*
+	 * Save interrupts enable mask, and enable RX interrupts in case if
+	 * the interrupt is used for NMI entry.
+	 */
+	port->im = pl011_read(port, REG_IMSC);
+	pl011_write(UART011_RTIM | UART011_RXIM, port, REG_IMSC);
+
+	if (dev_get_platdata(port->dev)) {
+		struct amba_pl011_data *plat;
+
+		plat = dev_get_platdata(port->dev);
+		if (plat->init)
+			plat->init();
+	}
+	return 0;
+}
+
+static bool pl011_split_lcrh(const struct rt_amba_uart_port *uap)
+{
+	return pl011_reg_to_offset(uap, REG_LCRH_RX) !=
+	       pl011_reg_to_offset(uap, REG_LCRH_TX);
+}
+
+static void pl011_write_lcr_h(struct rt_amba_uart_port *uap, unsigned int lcr_h)
+{
+	pl011_write(lcr_h, uap, REG_LCRH_RX);
+	if (pl011_split_lcrh(uap)) {
+		int i;
+		/*
+		 * Wait 10 PCLKs before writing LCRH_TX register,
+		 * to get this delay write read only register 10 times
+		 */
+		for (i = 0; i < 10; ++i)
+			pl011_write(0xff, uap, REG_MIS);
+		pl011_write(lcr_h, uap, REG_LCRH_TX);
+	}
+}
+
+/*
+ * Enable interrupts, only timeouts when using DMA
+ * if initial RX DMA job failed, start in interrupt mode
+ * as well.
+ */
+static void pl011_enable_interrupts(struct rt_amba_uart_ctx *ctx)
+{
+    struct rt_amba_uart_port *uap = ctx->port;
+    rtdm_lockctx_t lock_ctx;
+	unsigned int i;
+
+    rtdm_lock_get_irqsave(&ctx->lock, lock_ctx);
+
+	/* Clear out any spuriously appearing RX interrupts */
+	pl011_write(UART011_RTIS | UART011_RXIS, uap, REG_ICR);
+
+	/*
+	 * RXIS is asserted only when the RX FIFO transitions from below
+	 * to above the trigger threshold.  If the RX FIFO is already
+	 * full to the threshold this can't happen and RXIS will now be
+	 * stuck off.  Drain the RX FIFO explicitly to fix this:
+	 */
+	//TBD - fifosize
+	for (i = 0; i < uap->fifosize * 2; ++i) {
+		if (pl011_read(uap, REG_FR) & UART01x_FR_RXFE)
+			break;
+
+		pl011_read(uap, REG_DR);
+	}
+
+	uap->im = UART011_RTIM | UART011_RXIM;
+	pl011_write(uap->im, uap, REG_IMSC);
+    rtdm_lock_put_irqrestore(&ctx->lock, lock_ctx);
+}
+
+static void pl011_disable_interrupts(struct rt_amba_uart_ctx *ctx)
+{
+    struct rt_amba_uart_port *uap = ctx->port;
+    rtdm_lock_get(&ctx->lock);
+    
+	/* mask all interrupts and clear all pending ones */
+	uap->im = 0;
+	pl011_write(uap->im, uap, REG_IMSC);
+	pl011_write(0xffff, uap, REG_ICR);
+    
+    rtdm_lock_put(&ctx->lock);
+}
+
+static void pl011_shutdown_channel(struct rt_amba_uart_port *uap,
+					unsigned int lcrh)
+{
+      unsigned long val;
+
+      val = pl011_read(uap, lcrh);
+      val &= ~(UART01x_LCRH_BRK | UART01x_LCRH_FEN);
+      pl011_write(val, uap, lcrh);
+}
+
+/*
+ * disable the port. It should not disable RTS and DTR.
+ * Also RTS and DTR state should be preserved to restore
+ * it during startup().
+ */
+static void pl011_disable_uart(struct rt_amba_uart_ctx *ctx)
+{
+    struct rt_amba_uart_port *uap = ctx->port;
+    rtdm_lockctx_t lock_ctx;
+	unsigned int cr;
+	
+	ctx->status &= ~(UPSTAT_AUTOCTS | UPSTAT_AUTORTS);
+	rtdm_lock_get_irqsave(&ctx->lock, lock_ctx); //TBD
+	cr = pl011_read(uap, REG_CR);
+	uap->old_cr = cr;
+	cr &= UART011_CR_RTS | UART011_CR_DTR;
+	cr |= UART01x_CR_UARTEN | UART011_CR_TXE;
+	pl011_write(cr, uap, REG_CR);
+	rtdm_lock_put_irqrestore(&ctx->lock, lock_ctx); //TBD
+
+	/*
+	 * disable break condition and fifos
+	 */
+	pl011_shutdown_channel(uap, REG_LCRH_RX);
+	if (pl011_split_lcrh(uap))
+		pl011_shutdown_channel(uap, REG_LCRH_TX);
+}
+
+static void rt_pl011_tx_chars(struct rt_amba_uart_ctx *ctx);
+static void rt_amba_uart_start_tx(struct rt_amba_uart_ctx *ctx)
+{
+	struct rt_amba_uart_port *uap = ctx->port;
+    //rtdm_printk("%s\n", __FUNCTION__);
+    rt_pl011_tx_chars(ctx);
+    uap->im |= UART011_TXIM;
+    pl011_write(uap->im, uap, REG_IMSC);
+}
+
+static void rt_amba_uart_stop_tx(struct rt_amba_uart_ctx *ctx)
+{
+	struct rt_amba_uart_port *uap = ctx->port;
+	uap->im &= ~UART011_TXIM;
+	pl011_write(uap->im, uap, REG_IMSC);
+}
+
+
+static void rt_pl011_enable_ms(struct rt_amba_uart_ctx *ctx)
+{
+	struct rt_amba_uart_port *uap = ctx->port;
+
+	uap->im |= UART011_RIMIM|UART011_CTSMIM|UART011_DCDMIM|UART011_DSRMIM;
+	pl011_write(uap->im, uap, REG_IMSC);
+}
+
+
+static int rt_pl011_rx_chars(struct rt_amba_uart_ctx *ctx,
+				uint64_t *timestamp)
+{
+    struct rt_amba_uart_port *uap = ctx->port;
+    unsigned int rx;
+	int rbytes = 0;
+	int lsr = 0;
+    
+    while(!(pl011_read(uap, REG_FR) & UART01x_FR_RXFE)){
+        rx = pl011_read(uap, REG_DR) | UART_DUMMY_DR_RX;
+                
+        if (unlikely(rx & UART_DR_ERROR)) {
+			if (rx & UART011_DR_PE)
+				lsr |= RTSER_LSR_PARITY_ERR;
+			else if (rx & UART011_DR_FE)
+				lsr |= RTSER_LSR_FRAMING_ERR;
+            if (rx & UART011_DR_OE)
+				lsr |= RTSER_LSR_OVERRUN_ERR;
+        }
+        
+        /* save received character */
+		ctx->in_buf[ctx->in_tail] = rx & 0xff;
+		if (ctx->in_history)
+			ctx->in_history[ctx->in_tail] = *timestamp;
+		ctx->in_tail = (ctx->in_tail + 1) & (IN_BUFFER_SIZE - 1);
+
+		if (unlikely(ctx->in_npend >= IN_BUFFER_SIZE))
+			lsr |= RTSER_SOFT_OVERRUN_ERR;
+		else
+			ctx->in_npend++;
+
+		rbytes++;
+    }
+    
+	/* save new errors */
+	ctx->status |= lsr;
+
+	return rbytes;
+}
+
+
+static void rt_pl011_tx_chars(struct rt_amba_uart_ctx *ctx)
+{
+    struct rt_amba_uart_port *uap = ctx->port;
+    unsigned int ch;
+    
+    rtdm_printk("out_npend=%d\n", (int)ctx->out_npend);
+	while (ctx->out_npend > 0 &&
+	       !(pl011_read(uap, REG_FR) & UART01x_FR_TXFF)) {
+        
+        ch = ctx->out_buf[ctx->out_head++];
+        rtdm_printk("0x%02x ", ch);
+        pl011_write(ch, uap, REG_DR);
+		ctx->out_head &= (OUT_BUFFER_SIZE - 1);
+		ctx->out_npend--;
+	}
+}
+
+static int pl011_modem_status(struct rt_amba_uart_port *uap)
+{
+	unsigned int status, delta, events=0;
+
+	status = pl011_read(uap, REG_FR) & UART01x_FR_MODEM_ANY;
+
+	delta = status ^ uap->old_status;
+	uap->old_status = status;
+
+	if (!delta)
+		return events;
+	
+	//TBD??? - 放到 set_config 
+	if (delta & UART01x_FR_DCD){
+		events |= (status & UART01x_FR_DCD)? RTSER_EVENT_MODEMHI:RTSER_EVENT_MODEMLO;
+		//uart_handle_dcd_change(&uap, status & UART01x_FR_DCD); //TBD
+	}
+	
+	//not used in this chip
+	//if (delta & uap->vendor->fr_dsr)
+	//	uap->port.icount.dsr++;
+	
+	if (delta & uap->vendor->fr_cts){
+		events |= (status & uap->vendor->fr_cts)? RTSER_EVENT_MODEMHI:RTSER_EVENT_MODEMLO;
+		//uart_handle_cts_change(&uap, status & uap->vendor->fr_cts); //TBD
+	}
+    
+    return events;
+}
+
+static void check_apply_cts_event_workaround(struct rt_amba_uart_port *uap)
+{
+	if (!uap->vendor->cts_event_workaround)
+		return;
+
+	/* workaround to make sure that all bits are unlocked.. */
+	pl011_write(0x00, uap, REG_ICR);
+
+	/*
+	 * WA: introduce 26ns(1 uart clk) delay before W1C;
+	 * single apb access will incur 2 pclk(133.12Mhz) delay,
+	 * so add 2 dummy reads
+	 */
+	pl011_read(uap, REG_ICR);
+	pl011_read(uap, REG_ICR);
+}
+
+static int rt_pl011_int(rtdm_irq_t *irq_context)
+{
+    uint64_t timestamp = rtdm_clock_read();
+    struct rt_amba_uart_ctx *ctx;
+    struct rt_amba_uart_port *uap;
+    int rbytes = 0, events = 0;
+    unsigned int status, pass_counter = AMBA_ISR_PASS_LIMIT;
+    int ret = RTDM_IRQ_NONE;
+    
+    rtdm_printk("%s", __func__);
+    ctx = rtdm_irq_get_arg(irq_context, struct rt_amba_uart_ctx);
+    uap = ctx->port;
+    rtdm_lock_get(&ctx->lock);
+    
+	status = pl011_read(uap, REG_RIS) & uap->im;
+	if (status) {
+		do {
+			check_apply_cts_event_workaround(uap);
+
+			pl011_write(status & ~(UART011_TXIS|UART011_RTIS|
+					       UART011_RXIS), uap, REG_ICR);
+
+			if (status & (UART011_RTIS|UART011_RXIS)) {
+                rt_pl011_rx_chars(ctx, &timestamp);
+				events |= RTSER_EVENT_RXPEND;
+			}
+			
+			if (status & (UART011_DSRMIS|UART011_DCDMIS|
+				      UART011_CTSMIS|UART011_RIMIS)){
+				events |= pl011_modem_status(uap);
+			}
+			
+			if (status & UART011_TXIS){
+				rt_pl011_tx_chars(ctx);
+			}
+
+			if (pass_counter-- == 0)
+				break;
+
+			status = pl011_read(uap, REG_RIS) & uap->im;
+		} while (status != 0);
+		
+		ret = RTDM_IRQ_HANDLED;
+	}
+	
+	if (ctx->in_nwait > 0) {
+		if ((ctx->in_nwait <= rbytes) || ctx->status) {
+			ctx->in_nwait = 0;
+			rtdm_event_signal(&ctx->in_event);
+		} else {
+			ctx->in_nwait -= rbytes;
+		}
+	}
+
+	if (ctx->status) {
+		events |= RTSER_EVENT_ERRPEND;
+		ctx->ier_status &= ~IER_STAT;
+	}
+
+	if (events & ctx->config.event_mask) {
+		int old_events = ctx->ioc_events;
+
+		ctx->last_timestamp = timestamp;
+		ctx->ioc_events = events;
+
+		if (!old_events)
+			rtdm_event_signal(&ctx->ioc_event);
+	}
+
+	if ((ctx->ier_status & IER_TX) && (ctx->out_npend == 0)) {
+		rt_amba_uart_stop_tx(ctx);
+		
+		ctx->ier_status &= ~IER_TX;
+		rtdm_event_signal(&ctx->out_event);
+	}
+	
+	rtdm_lock_put(&ctx->lock);
+	
+	if (ret != RTDM_IRQ_HANDLED)
+		pr_warn("%s: unhandled interrupt\n", __func__);
+	return ret;
+}
+
+static unsigned int rt_amba_uart_get_msr(struct rt_amba_uart_ctx *ctx)
+{
+	struct rt_amba_uart_port *uap = ctx->port;
+	unsigned int result = 0;
+	unsigned int status = pl011_read(uap, REG_FR);
+
+#define TIOCMBIT(uartbit, tiocmbit)	\
+	if (status & uartbit)		\
+		result |= tiocmbit
+
+	TIOCMBIT(UART01x_FR_DCD, TIOCM_CAR);
+	TIOCMBIT(uap->vendor->fr_dsr, TIOCM_DSR);
+	TIOCMBIT(uap->vendor->fr_cts, TIOCM_CTS);
+	TIOCMBIT(uap->vendor->fr_ri, TIOCM_RNG);
+#undef TIOCMBIT
+	return result;
+}
+
+static void rt_amba_uart_set_mcr(struct rt_amba_uart_ctx *ctx,
+				unsigned int mcr)
+{
+	struct rt_amba_uart_port *uap = ctx->port;
+	unsigned int cr;
+
+	cr = pl011_read(uap, REG_CR);
+
+#define	TIOCMBIT(tiocmbit, uartbit)		\
+	if (mcr & tiocmbit)		\
+		cr |= uartbit;		\
+	else				\
+		cr &= ~uartbit
+
+	TIOCMBIT(TIOCM_RTS, UART011_CR_RTS);
+	TIOCMBIT(TIOCM_DTR, UART011_CR_DTR);
+	TIOCMBIT(TIOCM_OUT1, UART011_CR_OUT1);
+	TIOCMBIT(TIOCM_OUT2, UART011_CR_OUT2);
+	TIOCMBIT(TIOCM_LOOP, UART011_CR_LBE);
+
+	if (ctx->status & UPSTAT_AUTORTS) {
+		/* We need to disable auto-RTS if we want to turn RTS off */
+		TIOCMBIT(TIOCM_RTS, UART011_CR_RTSEN);
+	}
+#undef TIOCMBIT
+
+	pl011_write(cr, uap, REG_CR);
+}
+
+static void rt_amba_uart_break_ctl(struct rt_amba_uart_ctx *ctx,
+				  int break_state)
+{
+    struct rt_amba_uart_port *uap = ctx->port;
+    unsigned int lcr_h;
+    lcr_h = pl011_read(uap, REG_LCRH_RX);
+
+	if (break_state == RTSER_BREAK_SET)
+		lcr_h |= UART01x_LCRH_BRK;
+	else
+		lcr_h &= ~UART01x_LCRH_BRK;
+    
+    pl011_write_lcr_h(uap, lcr_h);
+}
+
+static int rt_amba_uart_set_config(struct rt_amba_uart_ctx *ctx,
+				  const struct rtser_config *config,
+				  uint64_t **in_history_ptr)
+{
+	struct rt_amba_uart_port *uap = ctx->port;
+	rtdm_lockctx_t lock_ctx;
+	int err = 0;
+
+	rtdm_lock_get_irqsave(&ctx->lock, lock_ctx);
+    
+	if (config->config_mask & RTSER_SET_BAUD)
+		ctx->config.baud_rate = config->baud_rate;
+	if (config->config_mask & RTSER_SET_DATA_BITS)
+		ctx->config.data_bits = config->data_bits & DATA_BITS_MASK;
+	if (config->config_mask & RTSER_SET_PARITY)
+		ctx->config.parity = config->parity & PARITY_MASK;
+	if (config->config_mask & RTSER_SET_STOP_BITS)
+		ctx->config.stop_bits = config->stop_bits & STOP_BITS_MASK;
+    
+    /* Timeout manipulation is not atomic. The user is supposed to take
+	 * care not to use and change timeouts at the same time.
+	 */
+	if (config->config_mask & RTSER_SET_TIMEOUT_RX)
+		ctx->config.rx_timeout = config->rx_timeout;
+	if (config->config_mask & RTSER_SET_TIMEOUT_TX)
+		ctx->config.tx_timeout = config->tx_timeout;
+	if (config->config_mask & RTSER_SET_TIMEOUT_EVENT)
+		ctx->config.event_timeout = config->event_timeout;
+    
+    if (config->config_mask & RTSER_SET_TIMESTAMP_HISTORY) {
+		if (config->timestamp_history & RTSER_RX_TIMESTAMP_HISTORY) {
+			if (!ctx->in_history) {
+				ctx->in_history = *in_history_ptr;
+				*in_history_ptr = NULL;
+				if (!ctx->in_history)
+					err = -ENOMEM;
+			}
+		} else {
+			*in_history_ptr = ctx->in_history;
+			ctx->in_history = NULL;
+		}
+	}
+
+	if (config->config_mask & RTSER_SET_EVENT_MASK) {
+		ctx->config.event_mask = config->event_mask & EVENT_MASK;
+		ctx->ioc_events = 0;
+
+		if ((config->event_mask & RTSER_EVENT_RXPEND) &&
+		    (ctx->in_npend > 0))
+			ctx->ioc_events |= RTSER_EVENT_RXPEND;
+
+		if ((config->event_mask & RTSER_EVENT_ERRPEND)
+		    && ctx->status)
+			ctx->ioc_events |= RTSER_EVENT_ERRPEND;
+	}
+
+	if (config->config_mask & RTSER_SET_HANDSHAKE) {
+		ctx->config.handshake = config->handshake;
+
+		switch (ctx->config.handshake) {
+		case RTSER_RTSCTS_HAND:
+			/* ...? */
+
+		default:	/* RTSER_NO_HAND */
+			ctx->mcr_status = RTSER_MCR_RTS | RTSER_MCR_OUT1;
+			break;
+		}
+        rt_amba_uart_set_mcr(ctx, ctx->mcr_status);
+	}
+
+	/* configure hardware with new parameters */
+	if (config->config_mask & (RTSER_SET_BAUD |
+				   RTSER_SET_PARITY |
+				   RTSER_SET_DATA_BITS |
+				   RTSER_SET_STOP_BITS |
+				   RTSER_SET_EVENT_MASK |
+				   RTSER_SET_HANDSHAKE)) {
+		
+		unsigned int lcr_h, old_cr;
+		unsigned int baud, quot, clkdiv;
+
+		//if (uap->vendor->oversampling)
+		//	clkdiv = 8;
+		//else
+		//	clkdiv = 16;
+
+		/*
+		* Ask the core to calculate the divisor for us.
+		*/
+		baud = ctx->config.baud_rate;
+        
+		if (baud > uap->uartclk/16)
+			quot = DIV_ROUND_CLOSEST(uap->uartclk * 8, baud);
+		else
+			quot = DIV_ROUND_CLOSEST(uap->uartclk * 4, baud);
+		
+		rtdm_printk("data_bits=%d\n", ctx->config.data_bits);
+		switch (ctx->config.data_bits) {
+		case RTSER_5_BITS:
+			lcr_h = UART01x_LCRH_WLEN_5;
+			break;
+		case RTSER_6_BITS:
+			lcr_h = UART01x_LCRH_WLEN_6;
+			break;
+		case RTSER_7_BITS:
+			lcr_h = UART01x_LCRH_WLEN_7;
+			break;
+		case RTSER_8_BITS:
+		default: // CS8
+			lcr_h = UART01x_LCRH_WLEN_8;
+			break;
+		}
+		
+		if (ctx->config.stop_bits == RTSER_2_STOPB)
+			lcr_h |= UART01x_LCRH_STP2;
+		if (ctx->config.parity == RTSER_ODD_PARITY ||
+		    ctx->config.parity == RTSER_EVEN_PARITY) {
+			
+			lcr_h |= UART01x_LCRH_PEN;
+			if (ctx->config.parity == RTSER_ODD_PARITY)
+				lcr_h &= ~UART01x_LCRH_EPS;
+			else if (ctx->config.parity == RTSER_EVEN_PARITY)
+				lcr_h |= UART01x_LCRH_EPS;
+		}
+		
+        rtdm_printk("fifosize = %d", uap->fifosize);
+		if (uap->fifosize > 1)
+			lcr_h |= UART01x_LCRH_FEN;//enable fifo
+
+		//pl011_setup_status_masks(port, termios); 
+		
+		if (config->event_mask &
+		    (RTSER_EVENT_MODEMHI | RTSER_EVENT_MODEMLO))
+			rt_pl011_enable_ms(ctx);
+
+		/* first, disable everything */
+		old_cr = pl011_read(uap, REG_CR);
+		pl011_write(0, uap, REG_CR);
+		
+		if (uap->have_rtscts) {
+			if (old_cr & UART011_CR_RTS)
+				old_cr |= UART011_CR_RTSEN;
+
+			old_cr |= UART011_CR_CTSEN;
+			ctx->status |= UPSTAT_AUTOCTS | UPSTAT_AUTORTS;
+		} else {
+			old_cr &= ~(UART011_CR_CTSEN | UART011_CR_RTSEN);
+			ctx->status &= ~(UPSTAT_AUTOCTS | UPSTAT_AUTORTS);
+		}
+
+		if (uap->vendor->oversampling) {
+			if (baud > uap->uartclk / 16)
+				old_cr |= ST_UART011_CR_OVSFACT;
+			else
+				old_cr &= ~ST_UART011_CR_OVSFACT;
+		}
+
+		/*
+		 * Workaround for the ST Micro oversampling variants to
+		 * increase the bitrate slightly, by lowering the divisor,
+		 * to avoid delayed sampling of start bit at high speeds,
+		 * else we see data corruption.
+		 */
+		if (uap->vendor->oversampling) {
+			if ((baud >= 3000000) && (baud < 3250000) && (quot > 1))
+				quot -= 1;
+			else if ((baud > 3250000) && (quot > 2))
+				quot -= 2;
+		}
+		/* Set baud rate */
+		pl011_write(quot & 0x3f, uap, REG_FBRD);
+		pl011_write(quot >> 6, uap, REG_IBRD);
+
+		/*
+		 * ----------v----------v----------v----------v-----
+		 * NOTE: REG_LCRH_TX and REG_LCRH_RX MUST BE WRITTEN AFTER
+		 * REG_FBRD & REG_IBRD.
+		 * ----------^----------^----------^----------^-----
+		 */
+		pl011_write_lcr_h(uap, lcr_h);
+		pl011_write(old_cr, uap, REG_CR);
+
+		//rtdm_lock_put_irqrestore(&ctx->lock, lock_ctx);
+    }
+    
+	rtdm_lock_put_irqrestore(&ctx->lock, lock_ctx);
+	return err;
+}
+
+void rt_amba_uart_cleanup_ctx(struct rt_amba_uart_ctx *ctx)
+{
+	rtdm_event_destroy(&ctx->in_event);
+	rtdm_event_destroy(&ctx->out_event);
+	rtdm_event_destroy(&ctx->ioc_event);
+	rtdm_mutex_destroy(&ctx->out_lock);
+}
 
 static int rt_pl011_uart_open(struct rtdm_fd *fd, int oflags)
 {
-	printk("%s", __FUNCTION__);
-	
-	return 0;
+    struct rt_amba_uart_port *uap=NULL;
+	struct rt_amba_uart_ctx *ctx=NULL;
+    unsigned int cr;
+    int retval;
+    
+    rtdm_printk("%s", __FUNCTION__);
+    
+    // rtdm init
+    ctx = rtdm_fd_to_private(fd);
+	ctx->port = (struct rt_amba_uart_port *)rtdm_fd_device(fd)->device_data;
+    
+	uap = ctx->port;
+
+	/* IPC initialisation - cannot fail with used parameters */
+	rtdm_lock_init(&ctx->lock);
+	rtdm_event_init(&ctx->in_event, 0);
+	rtdm_event_init(&ctx->out_event, 0);
+	rtdm_event_init(&ctx->ioc_event, 0);
+	rtdm_mutex_init(&ctx->out_lock);
+    
+    ctx->in_head = 0;
+	ctx->in_tail = 0;
+	ctx->in_npend = 0;
+	ctx->in_nwait = 0;
+	ctx->in_lock = 0;
+	ctx->in_history = NULL;
+
+	ctx->out_head = 0;
+	ctx->out_tail = 0;
+	ctx->out_npend = 0;
+
+	ctx->ioc_events = 0;
+	ctx->ioc_event_lock = 0;
+	ctx->status = 0;
+	ctx->saved_errors = 0;
+    
+    
+    // hwinit
+    retval = pl011_hwinit(uap);
+	if (retval)
+		goto clk_dis;
+    
+    /* set im when after reset hw and before enable irq */
+    pl011_write(uap->im, uap, REG_IMSC);
+    
+    pl011_write(uap->vendor->ifls, uap, REG_IFLS);
+    
+    rtdm_lock_get(&ctx->lock);
+    
+    /* restore RTS and DTR */
+	cr = uap->old_cr & (UART011_CR_RTS | UART011_CR_DTR);
+	cr |= UART01x_CR_UARTEN | UART011_CR_RXE | UART011_CR_TXE;
+	pl011_write(cr, uap, REG_CR);
+    
+    rtdm_lock_put(&ctx->lock);
+    
+    /* initialise the old status of the modem signals */
+    uap->old_status = pl011_read(uap, REG_FR) & UART01x_FR_MODEM_ANY;
+    
+    // irq
+    retval = rtdm_irq_request(&ctx->irq_handle,
+				uap->irq, rt_pl011_int, 0,
+				rtdm_fd_device(fd)->name, ctx);
+    
+    pl011_enable_interrupts(ctx);
+    return retval;
+    
+clk_dis:
+    return retval;
 }
 
 void rt_pl011_uart_close(struct rtdm_fd *fd)
 {
-	printk("%s", __FUNCTION__);
+    struct rt_amba_uart_port *uap=NULL;
+	struct rt_amba_uart_ctx *ctx=NULL;
+	rtdm_printk("%s", __FUNCTION__);
 	
-	
+	ctx = rtdm_fd_to_private(fd);
+	uap = ctx->port;
+    
+    pl011_disable_interrupts(ctx);
+    rtdm_irq_free(&ctx->irq_handle);
+    
+    pl011_disable_uart(ctx);
+    
+    rt_amba_uart_cleanup_ctx(ctx);
+	kfree(ctx->in_history);
+    
+    /* Shut down the clock producer */
+	clk_disable_unprepare(uap->clk);
+    
+    /* Optionally let pins go into sleep states */
+	pinctrl_pm_select_sleep_state(uap->dev);
+
+	if (dev_get_platdata(uap->dev)) {
+		struct amba_pl011_data *plat;
+
+		plat = dev_get_platdata(uap->dev);
+		if (plat->exit)
+			plat->exit();
+	}
 }
 
 
 static int rt_pl011_uart_ioctl(struct rtdm_fd *fd,
 			     unsigned int request, void *arg)
 {
+	rtdm_lockctx_t lock_ctx;
+    struct rt_amba_uart_port *uap;
+	struct rt_amba_uart_ctx *ctx;
 	int err = 0;
-	printk("%s", __FUNCTION__);
-	
+    printk("%s", __FUNCTION__);
+    
+	ctx = rtdm_fd_to_private(fd);
+    uap = ctx->port;
+    
+	switch (request) {
+	case RTSER_RTIOC_GET_CONFIG:
+		if (rtdm_fd_is_user(fd))
+			err = rtdm_safe_copy_to_user(fd, arg,
+						   &ctx->config,
+						   sizeof(struct rtser_config));
+		else
+			memcpy(arg, &ctx->config,
+			       sizeof(struct rtser_config));
+		break;
+
+	case RTSER_RTIOC_SET_CONFIG: {
+    	struct rtser_config *config;
+		struct rtser_config config_buf;
+		uint64_t *hist_buf = NULL;
+
+		/*
+		 * We may call regular kernel services ahead, ask for
+		 * re-entering secondary mode if need be.
+		 */
+		if (rtdm_in_rt_context())
+			return -ENOSYS;
+
+		config = (struct rtser_config *)arg;
+		if (rtdm_fd_is_user(fd)) {
+			err = rtdm_safe_copy_from_user(fd, &config_buf,
+						     arg, sizeof(struct rtser_config));
+			if (err)
+				return err;
+
+			config = &config_buf;
+		}
+        
+        printk("baud_rate=%d, uartclk = %d", config->baud_rate, uap->uartclk);
+		if ((config->config_mask & RTSER_SET_BAUD) &&
+		    (config->baud_rate > uap->uartclk / 16 ||
+		     config->baud_rate <= 0))
+			/* invalid baudrate for this port */
+			return -EINVAL;
+
+		if (config->config_mask & RTSER_SET_TIMESTAMP_HISTORY) {
+			if (config->timestamp_history & RTSER_RX_TIMESTAMP_HISTORY)
+				hist_buf = kmalloc(IN_BUFFER_SIZE * sizeof(nanosecs_abs_t), GFP_KERNEL);
+		}
+        
+		rt_amba_uart_set_config(ctx, config, &hist_buf);
+
+		if (hist_buf)
+			kfree(hist_buf);
+		break;
+	}
+    
+    case RTSER_RTIOC_GET_STATUS: {
+        break;
+    }
+    
+    case RTSER_RTIOC_GET_CONTROL:{
+        break;
+    }
+    
+    case RTSER_RTIOC_SET_CONTROL: {
+        break;
+    }
+    
+    case RTSER_RTIOC_WAIT_EVENT: {
+        break;
+    }
+    
+    case RTSER_RTIOC_BREAK_CTL: {
+		rtdm_lock_get_irqsave(&ctx->lock, lock_ctx);
+		rt_amba_uart_break_ctl(ctx, (unsigned long)arg);
+		rtdm_lock_put_irqrestore(&ctx->lock, lock_ctx);
+		break;
+	}
+    
+	default:
+		err = -ENOTTY;
+	}
+
 	return err;
 }
 
 ssize_t rt_pl011_uart_read(struct rtdm_fd *fd, void *buf, size_t nbyte)
 {
+	struct rt_amba_uart_ctx *ctx;
+	rtdm_lockctx_t lock_ctx;
+	size_t read = 0;
+	int pending;
+	int block;
+	int subblock;
+	int in_pos;
+	char *out_pos = (char *)buf;
+	rtdm_toseq_t timeout_seq;
 	ssize_t ret = -EAGAIN;	/* for non-blocking read */
-	printk("%s", __FUNCTION__);
+	int nonblocking;
+    
+    rtdm_printk("%s", __FUNCTION__);
+	if (nbyte == 0)
+		return 0;
 	
+	if (rtdm_fd_is_user(fd) && !rtdm_rw_user_ok(fd, buf, nbyte))
+		return -EFAULT;
+
+	ctx = rtdm_fd_to_private(fd);
+	rtdm_toseq_init(&timeout_seq, ctx->config.rx_timeout);
+
+	/* non-blocking is handled separately here */
+	nonblocking = (ctx->config.rx_timeout < 0);
+    
+    /* only one reader allowed, stop any further attempts here */
+	if (test_and_set_bit(0, &ctx->in_lock))
+		return -EBUSY;
+    
+    rtdm_lock_get_irqsave(&ctx->lock, lock_ctx);
+    
+    while (1) {
+        if (ctx->status) {
+			if (ctx->status & RTSER_LSR_BREAK_IND)
+				ret = -EPIPE;
+			else
+				ret = -EIO;
+			ctx->saved_errors = ctx->status &
+			    (RTSER_LSR_OVERRUN_ERR | RTSER_LSR_PARITY_ERR |
+			     RTSER_LSR_FRAMING_ERR | RTSER_SOFT_OVERRUN_ERR);
+			ctx->status = 0;
+			break;
+		}
+        
+        pending = ctx->in_npend;
+        
+        if (pending > 0) {
+			block = subblock = (pending <= nbyte) ? pending : nbyte;
+			in_pos = ctx->in_head;
+            
+			rtdm_lock_put_irqrestore(&ctx->lock, lock_ctx);
+            
+            /* Do we have to wrap around the buffer end? */
+			if (in_pos + subblock > IN_BUFFER_SIZE) {
+				/* Treat the block between head and buffer end
+				 * separately.
+				 */
+				subblock = IN_BUFFER_SIZE - in_pos;
+
+				if (rtdm_fd_is_user(fd)) {
+					if (rtdm_copy_to_user
+					    (fd, out_pos,
+					     &ctx->in_buf[in_pos],
+					     subblock) != 0) {
+						ret = -EFAULT;
+						goto break_unlocked;
+					}
+				} else
+					memcpy(out_pos, &ctx->in_buf[in_pos], subblock);
+
+				read += subblock;
+				out_pos += subblock;
+				subblock = block - subblock;
+				in_pos = 0;
+			}
+
+			if (rtdm_fd_is_user(fd)) {
+				if (rtdm_copy_to_user(fd, out_pos,
+						      &ctx->in_buf[in_pos],
+						      subblock) != 0) {
+					ret = -EFAULT;
+					goto break_unlocked;
+				}
+			} else
+				memcpy(out_pos, &ctx->in_buf[in_pos], subblock);
+
+			read += subblock;
+			out_pos += subblock;
+			nbyte -= block;
+
+			rtdm_lock_get_irqsave(&ctx->lock, lock_ctx);
+
+			ctx->in_head = (ctx->in_head + block) & (IN_BUFFER_SIZE - 1);
+			ctx->in_npend -= block;
+			if (ctx->in_npend == 0)
+				ctx->ioc_events &= ~RTSER_EVENT_RXPEND;
+
+			if (nbyte == 0)
+				break; /* All requested bytes read. */
+
+			continue;
+        }
+
+		if (nonblocking)
+			/* ret was set to EAGAIN in case of a real
+			 * non-blocking call or contains the error
+			 * returned by rtdm_event_wait[_until]
+			 */
+			break;
+
+		ctx->in_nwait = nbyte;
+		rtdm_lock_put_irqrestore(&ctx->lock, lock_ctx);
+		ret = rtdm_event_timedwait(&ctx->in_event,
+					   ctx->config.rx_timeout,
+					   &timeout_seq);
+		if (ret < 0) {
+			if (ret == -EIDRM) {
+				/* Device has been closed - return immediately */
+				return -EBADF;
+			}
+
+			rtdm_lock_get_irqsave(&ctx->lock, lock_ctx);
+			nonblocking = 1;
+			if (ctx->in_npend > 0) {
+				/* Final turn: collect pending bytes before exit. */
+				continue;
+			}
+
+			ctx->in_nwait = 0;
+			break;
+		}
+    
+        rtdm_lock_get_irqsave(&ctx->lock, lock_ctx);
+	}
+
+	rtdm_lock_put_irqrestore(&ctx->lock, lock_ctx);
+
+break_unlocked:
+	/* Release the simple reader lock, */
+	clear_bit(0, &ctx->in_lock);
+
+	if ((read > 0) && ((ret == 0) || (ret == -EAGAIN) ||
+			   (ret == -ETIMEDOUT)))
+		ret = read;
+    
 	return ret;
 }
 
 static ssize_t rt_pl011_uart_write(struct rtdm_fd *fd, const void *buf,
 				size_t nbyte)
 {
-	int ret,err = 0;
-	
-	printk("%s", __FUNCTION__);
+	struct rt_amba_uart_ctx *ctx;
+	rtdm_lockctx_t lock_ctx;
+	size_t written = 0;
+	int free;
+	int block;
+	int subblock;
+	int out_pos;
+	char *in_pos = (char *)buf;
+	rtdm_toseq_t timeout_seq;
+	ssize_t ret;
+    rtdm_printk("%s\n", __FUNCTION__);
+
+	if (nbyte == 0)
+		return 0;
+
+	if (rtdm_fd_is_user(fd) && !rtdm_read_user_ok(fd, buf, nbyte))
+		return -EFAULT;
+
+	ctx = rtdm_fd_to_private(fd);
+
+	rtdm_toseq_init(&timeout_seq, ctx->config.rx_timeout);
+
+	/* Make write operation atomic. */
+	ret = rtdm_mutex_timedlock(&ctx->out_lock, ctx->config.rx_timeout,
+				   &timeout_seq);
+	if (ret)
+		return ret;
+
+	while (nbyte > 0) {
+		rtdm_lock_get_irqsave(&ctx->lock, lock_ctx);
+
+		free = OUT_BUFFER_SIZE - ctx->out_npend;
+
+		if (free > 0) {
+			block = subblock = (nbyte <= free) ? nbyte : free;
+			out_pos = ctx->out_tail;
+
+			rtdm_lock_put_irqrestore(&ctx->lock, lock_ctx);
+
+			/* Do we have to wrap around the buffer end? */
+			if (out_pos + subblock > OUT_BUFFER_SIZE) {
+				/* Treat the block between head and buffer
+				 * end separately.
+				 */
+				subblock = OUT_BUFFER_SIZE - out_pos;
+
+				if (rtdm_fd_is_user(fd)) {
+					if (rtdm_copy_from_user
+					    (fd,
+					     &ctx->out_buf[out_pos],
+					     in_pos, subblock) != 0) {
+						ret = -EFAULT;
+						break;
+					}
+				} else
+					memcpy(&ctx->out_buf[out_pos], in_pos,
+					       subblock);
+
+				written += subblock;
+				in_pos += subblock;
+
+				subblock = block - subblock;
+				out_pos = 0;
+			}
+
+			if (rtdm_fd_is_user(fd)) {
+				if (rtdm_copy_from_user
+				    (fd, &ctx->out_buf[out_pos],
+				     in_pos, subblock) != 0) {
+					ret = -EFAULT;
+					break;
+				}
+			} else
+				memcpy(&ctx->out_buf[out_pos], in_pos, block);
+
+			written += subblock;
+			in_pos += subblock;
+			nbyte -= block;
+
+			rtdm_lock_get_irqsave(&ctx->lock, lock_ctx);
+
+			ctx->out_tail =
+			    (ctx->out_tail + block) & (OUT_BUFFER_SIZE - 1);
+			ctx->out_npend += block;
+
+			ctx->ier_status |= IER_TX;
+			rt_amba_uart_start_tx(ctx);
+
+			rtdm_lock_put_irqrestore(&ctx->lock, lock_ctx);
+			continue;
+		}
+
+		rtdm_lock_put_irqrestore(&ctx->lock, lock_ctx);
+
+		ret = rtdm_event_timedwait(&ctx->out_event,
+					   ctx->config.tx_timeout,
+					   &timeout_seq);
+		if (ret < 0) {
+			if (ret == -EIDRM) {
+				/* Device has been closed -
+				 * return immediately.
+				 */
+				ret = -EBADF;
+			}
+			break;
+		}
+	}
+
+	rtdm_mutex_unlock(&ctx->out_lock);
+
+	if ((written > 0) && ((ret == 0) || (ret == -EAGAIN) ||
+			      (ret == -ETIMEDOUT)))
+		ret = written;
+
 	return ret;
 }
 
@@ -424,7 +1496,7 @@ static struct rtdm_driver pl011_uart_driver = {
 						    RTSER_PROFILE_VER),
 	.device_count		= RT_PL011_UART_MAX,
 	.device_flags		= RTDM_NAMED_DEVICE | RTDM_EXCLUSIVE,
-	.context_size		= sizeof(struct rt_imx_uart_ctx),
+	.context_size		= sizeof(struct rt_amba_uart_ctx),
 	.ops = {
 		.open		= rt_pl011_uart_open,
 		.close		= rt_pl011_uart_close,
@@ -438,7 +1510,7 @@ static struct rtdm_driver pl011_uart_driver = {
 static int rt_pl011_probe(struct amba_device *dev, const struct amba_id *id)
 {
 	struct rtdm_device *rtdm_dev;
-	struct rt_uart_amba_port *uap;
+	struct rt_amba_uart_port *uap;
 	struct vendor_data *vendor = id->data;
 	int portnr, ret;
 	printk("%s:%d", __FUNCTION__, __LINE__);
@@ -447,8 +1519,7 @@ static int rt_pl011_probe(struct amba_device *dev, const struct amba_id *id)
 	if (portnr < 0)
 		return portnr;
 
-	uap = devm_kzalloc(&dev->dev, sizeof(struct rt_uart_amba_port),
-			   GFP_KERNEL);
+	uap = devm_kzalloc(&dev->dev, sizeof(*uap), GFP_KERNEL);
 	if (!uap)
 		return -ENOMEM;
 
@@ -460,17 +1531,19 @@ static int rt_pl011_probe(struct amba_device *dev, const struct amba_id *id)
 	    vendor->cts_event_workaround = true;
 	    dev_info(&dev->dev, "cts_event_workaround enabled\n");
 	}
-
+    
 	uap->reg_offset = vendor->reg_offset;
 	uap->vendor = vendor;
 	uap->fifosize = vendor->get_fifosize(dev);
 	uap->iotype = vendor->access_32b ? UPIO_MEM32 : UPIO_MEM;
 	uap->irq = dev->irq[0];
-	// uap->port.ops = &amba_pl011_pops;
-
+    printk("irq = %d\n", dev->irq[0]);
+    
+    uap->have_rtscts = 1;
+    
 	snprintf(uap->type, sizeof(uap->type), "PL011 rev%u", amba_rev(dev));
 	amba_set_drvdata(dev, uap);
-
+    
 	ret = pl011_setup_port(&dev->dev, uap, &dev->res, portnr);
 	if (ret)
 		return ret;
@@ -484,13 +1557,12 @@ static int rt_pl011_probe(struct amba_device *dev, const struct amba_id *id)
 	rtdm_dev->label = "rtser%d";
 	rtdm_dev->device_data = uap;
 	
+    printk("id=%d, tx_fifo=%d", id->id, tx_fifo[id->id]);
 	if (!tx_fifo[id->id] || tx_fifo[id->id] > TX_FIFO_SIZE)
 		uap->tx_fifo = TX_FIFO_SIZE;
 	else
 		uap->tx_fifo = tx_fifo[id->id];
-	
-	printk("%s:%d", __FUNCTION__, __LINE__);
-	// ??? enable clk
+    
 	uap->use_hwflow = 1;
 	
 	ret = rtdm_dev_register(rtdm_dev);
@@ -499,17 +1571,24 @@ static int rt_pl011_probe(struct amba_device *dev, const struct amba_id *id)
 
 	amba_set_drvdata(dev, uap);
 	
-	pr_info("%s on IMX UART%d: membase=0x%p irq=%d clk=%d\n",
-	       rtdm_dev->name, id->id, uap->membase, uap->irq, uap->clk);
+	printk("%s on AMBA UART%d: membase=0x%p irq=%d uartclk=%d\n",
+	       rtdm_dev->name, id->id, uap->membase, uap->irq, uap->uartclk);
 
 	return 0;
 }
 
 static void rt_pl011_remove(struct amba_device *dev)
 {
-	struct rt_uart_amba_port *uap = amba_get_drvdata(dev);
-	pl011_unregister_port(uap);
-	
+	struct rt_amba_uart_port *uap = amba_get_drvdata(dev);
+	struct rtdm_device *rtdm_dev = &uap->rtdm_dev;
+    
+    amba_set_drvdata(dev, NULL);
+    
+    /* Shut down the clock producer */
+	//clk_disable_unprepare(uap->clk);
+    
+	rtdm_dev_unregister(rtdm_dev);
+    pl011_unregister_port(uap);
 }
 
 
@@ -550,11 +1629,9 @@ static struct amba_driver rt_pl011_uart_driver = {
 static int __init rt_pl011_uart_init(void)
 {
 	int ret;
-
 	if (!rtdm_available())
 		return -ENODEV;
 
-	//ret = platform_driver_register(&rt_pl011_uart_driver);
     ret = amba_driver_register(&rt_pl011_uart_driver);
 	if (ret) {
 		pr_err("%s; Could not register  driver (err=%d)\n",
@@ -566,7 +1643,6 @@ static int __init rt_pl011_uart_init(void)
 
 static void __exit rt_pl011_uart_exit(void)
 {
-	//platform_driver_unregister(&rt_pl011_uart_driver);
     amba_driver_unregister(&rt_pl011_uart_driver);
 }
 

@@ -416,10 +416,8 @@ static void rtswitch_ktask(void *cookie)
 	rtswitch_pend_rt(ctx, task->base.index);
 
 	while (!rtdm_task_should_stop()) {
-		if (task->base.flags & RTTST_SWTEST_USE_FPU) {
-			fp_init();
+		if (task->base.flags & RTTST_SWTEST_USE_FPU)
 			fp_regs_set(fp_features, task->base.index + i * 1000);
-		}
 
 		switch(i % 3) {
 		case 0:
@@ -647,10 +645,6 @@ static int rtswitch_ioctl_nrt(struct rtdm_fd *fd,
 				    arg,
 				    sizeof(fromto));
 
-		if (fromto.switch_mode) {
-			xnthread_harden();
-			return rtswitch_to_rt(ctx, fromto.from, fromto.to);
-		}
 		return rtswitch_to_nrt(ctx, fromto.from, fromto.to);
 
 	case RTTST_RTIOC_SWTEST_GET_SWITCHES_COUNT:
@@ -705,10 +699,6 @@ static int rtswitch_ioctl_rt(struct rtdm_fd *fd,
 				    arg,
 				    sizeof(fromto));
 
-		if (fromto.switch_mode) {
-			xnthread_relax(0, 0);
-			return rtswitch_to_nrt(ctx, fromto.from, fromto.to);
-		}
 		return rtswitch_to_rt(ctx, fromto.from, fromto.to);
 
 	case RTTST_RTIOC_SWTEST_GET_LAST_ERROR:
