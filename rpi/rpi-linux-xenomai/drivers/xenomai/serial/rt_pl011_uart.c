@@ -303,7 +303,7 @@ static void pl011_write(unsigned int val, const struct rt_amba_uart_port *uap,
 {
 	void __iomem *addr = uap->membase + pl011_reg_to_offset(uap, reg);
     
-    pr_info("Writing to reg[%d], value: 0x%x\n", reg, val);
+    //pr_info("Writing to reg[%d], value: 0x%x\n", reg, val);
     
 	if (uap->iotype == UPIO_MEM32)
 		writel_relaxed(val, addr);
@@ -545,14 +545,15 @@ static void pl011_disable_uart(struct rt_amba_uart_ctx *ctx)
 		pl011_shutdown_channel(uap, REG_LCRH_TX);
 }
 
-static void rt_pl011_tx_chars(struct rt_amba_uart_ctx *ctx);
+static bool rt_pl011_tx_chars(struct rt_amba_uart_ctx *ctx);
 static void rt_amba_uart_start_tx(struct rt_amba_uart_ctx *ctx)
 {
 	struct rt_amba_uart_port *uap = ctx->port;
     //rtdm_printk("%s\n", __FUNCTION__);
-    rt_pl011_tx_chars(ctx);
-    uap->im |= UART011_TXIM;
-    pl011_write(uap->im, uap, REG_IMSC);
+    if(rt_pl011_tx_chars(ctx)){
+        uap->im |= UART011_TXIM;
+        pl011_write(uap->im, uap, REG_IMSC);
+    }
 }
 
 static void rt_amba_uart_stop_tx(struct rt_amba_uart_ctx *ctx)
@@ -613,7 +614,7 @@ static int rt_pl011_rx_chars(struct rt_amba_uart_ctx *ctx,
 }
 
 
-static void rt_pl011_tx_chars(struct rt_amba_uart_ctx *ctx)
+static bool rt_pl011_tx_chars(struct rt_amba_uart_ctx *ctx)
 {
     struct rt_amba_uart_port *uap = ctx->port;
     unsigned int ch;
@@ -625,9 +626,16 @@ static void rt_pl011_tx_chars(struct rt_amba_uart_ctx *ctx)
         ch = ctx->out_buf[ctx->out_head++];
         rtdm_printk("0x%02x ", ch);
         pl011_write(ch, uap, REG_DR);
+        mb();
 		ctx->out_head &= (OUT_BUFFER_SIZE - 1);
 		ctx->out_npend--;
 	}
+    
+    if(ctx->out_npend==0){
+        rt_amba_uart_stop_tx(ctx);
+        return false;
+    }
+    return true;
 }
 
 static int pl011_modem_status(struct rt_amba_uart_port *uap)
@@ -1414,8 +1422,7 @@ static ssize_t rt_pl011_uart_write(struct rtdm_fd *fd, const void *buf,
 			/* Do we have to wrap around the buffer end? */
 			if (out_pos + subblock > OUT_BUFFER_SIZE) {
 				/* Treat the block between head and buffer
-				 * end separately.
-				 */
+				 * end separately. */
 				subblock = OUT_BUFFER_SIZE - out_pos;
 
 				if (rtdm_fd_is_user(fd)) {

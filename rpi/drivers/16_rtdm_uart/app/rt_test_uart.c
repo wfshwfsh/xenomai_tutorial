@@ -46,8 +46,8 @@ static const struct rtser_config write_config = {
 	.fifo_depth        = RTSER_DEF_FIFO_DEPTH,
 	.rx_timeout        = RTSER_DEF_TIMEOUT,
 	.tx_timeout        = RTSER_DEF_TIMEOUT,
-	.timestamp_history = RTSER_DEF_TIMESTAMP_HISTORY,
-    .event_mask        = RTSER_EVENT_MODEMHI|RTSER_EVENT_MODEMLO,
+	//.timestamp_history = RTSER_DEF_TIMESTAMP_HISTORY,
+    //.event_mask        = RTSER_EVENT_MODEMHI|RTSER_EVENT_MODEMLO,
 	/* the rest implicitly remains default */
 };
 
@@ -60,6 +60,7 @@ int main (int argc, char *argv[])
 {
     int i, ret, tx_val=0,rx_val=0;
     unsigned char txbuf[]={0x31,0x32,0x33,0x61,0x62,0x63}, rxbuf[256]={0};
+    unsigned char *tx_ptr=txbuf;
     
 	/* open rtser0 */
 	write_fd = open(WRITE_FILE, 0);
@@ -68,7 +69,7 @@ int main (int argc, char *argv[])
 		return 0;
 	}
     
-#if 1
+#if 0
 	/* writing write-config */
 	ret = ioctl(write_fd, RTSER_RTIOC_SET_CONFIG, &write_config);
 	if (ret) {
@@ -77,13 +78,16 @@ int main (int argc, char *argv[])
 	}
 	printf("write-config written \n");
     
+    //for(i=0;i<sizeof(txbuf);i++){
+    //    ret = rt_dev_write(write_fd, tx_ptr++, 1);
     ret = rt_dev_write(write_fd, txbuf, sizeof(txbuf));
-    if(ret < 0) {
-        printf("failed to write data \n");
-    }
+        if(ret < 0) {
+            printf("failed to write data \n");
+        }
+    //}
 #endif
 
-#if 0
+#if 1
     ret = rt_dev_read(read_fd, rxbuf, sizeof(rxbuf));
     if(ret < 0) {
         printf("failed to read data\n");

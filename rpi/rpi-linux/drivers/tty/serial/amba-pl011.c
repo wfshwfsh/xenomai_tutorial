@@ -1811,7 +1811,7 @@ static int pl011_startup(struct uart_port *port)
 	if (retval)
 		goto clk_dis;
 
-	//retval = pl011_allocate_irq(uap);
+	retval = pl011_allocate_irq(uap);
 	if (retval)
 		goto clk_dis;
 
@@ -1922,7 +1922,7 @@ static void pl011_shutdown(struct uart_port *port)
 
 	pl011_dma_shutdown(uap);
 
-	//free_irq(uap->port.irq, uap);
+	free_irq(uap->port.irq, uap);
 
 	pl011_disable_uart(uap);
 
@@ -2717,7 +2717,7 @@ static int pl011_probe(struct amba_device *dev, const struct amba_id *id)
 	uap->port.iotype = vendor->access_32b ? UPIO_MEM32 : UPIO_MEM;
 	uap->port.irq = dev->irq[0];
 	uap->port.ops = &amba_pl011_pops;
-    printk("UART[%d] irq = %d\n", id->id, dev->irq[0]);
+    printk("irq = %d\n", dev->irq[0]);
 
 	snprintf(uap->type, sizeof(uap->type), "PL011 rev%u", amba_rev(dev));
 
