@@ -3538,7 +3538,6 @@ alias symbol:nfc_find_se nfc
 alias symbol:alloc_can_err_skb can_dev
 alias symbol:asoc_simple_parse_card_name snd_soc_simple_card_utils
 alias symbol:snd_pcm_lib_get_vmalloc_page snd_pcm
-alias symbol:ata_timing_find_mode libata
 alias symbol:btintel_send_intel_reset btintel
 alias symbol:hostap_remove_interface hostap
 alias symbol:iio_read_avail_channel_raw industrialio
@@ -4874,7 +4873,6 @@ alias symbol:snd_pcm_notify snd_pcm
 alias symbol:ieee80211_amsdu_to_8023s cfg80211
 alias symbol:cdrom_open cdrom
 alias symbol:ahci_reset_em libahci
-alias symbol:ata_acpi_gtm_xfermask libata
 alias symbol:ip_set_netmask_map ip_set
 alias symbol:snd_timer_continue snd_timer
 alias symbol:l2tp_session_get l2tp_core
@@ -4974,7 +4972,6 @@ alias symbol:dibusb_power_ctrl dvb_usb_dibusb_common
 alias symbol:dvb_register_device dvb_core
 alias symbol:fl6_update_dst ipv6
 alias symbol:drm_is_current_master drm
-alias symbol:ata_acpi_gtm libata
 alias symbol:dm_array_cursor_get_value dm_persistent_data
 alias symbol:snd_card_new snd
 alias symbol:v4l2_ctrl_handler_free videodev
@@ -5065,7 +5062,6 @@ alias symbol:unregister_pppox_proto pppox
 alias symbol:drm_gem_shmem_print_info drm
 alias symbol:ieee80211_iter_keys_rcu mac80211
 alias symbol:snd_register_oss_device snd
-alias symbol:ata_timing_compute libata
 alias symbol:drm_dp_get_adjust_request_pre_emphasis drm_kms_helper
 alias symbol:rt2800_get_txwi_rxwi_size rt2800lib
 alias symbol:rt2x00usb_vendor_req_buff_lock rt2x00usb
@@ -5337,7 +5333,6 @@ alias symbol:md_bitmap_resize md_mod
 alias symbol:drm_format_info_block_height drm
 alias symbol:nft_reject_icmpv6_code nft_reject
 alias symbol:snd_rawmidi_input_params snd_rawmidi
-alias symbol:ata_timing_merge libata
 alias symbol:fuse_dev_alloc fuse
 alias symbol:__SCK__tp_func_dev_irq mt76
 alias symbol:drm_atomic_helper_setup_commit drm_kms_helper
@@ -5474,7 +5469,6 @@ alias symbol:snd_jack_set_key snd
 alias symbol:drm_gem_fb_create_handle drm_kms_helper
 alias symbol:dvb_register_frontend dvb_core
 alias symbol:arizona_sample_rate_val_to_name snd_soc_arizona
-alias symbol:ata_acpi_cbl_80wire libata
 alias symbol:ata_wait_register libata
 alias symbol:dm_btree_walk dm_persistent_data
 alias symbol:vsock_remove_tap vsock
@@ -5847,7 +5841,6 @@ alias symbol:md_bitmap_update_sb md_mod
 alias symbol:rtl_cam_empty_entry rtlwifi
 alias symbol:synproxy_recv_client_ack_ipv6 nf_synproxy_core
 alias symbol:vb2_ioctl_streamoff videobuf2_v4l2
-alias symbol:ata_acpi_stm libata
 alias symbol:media_request_object_complete mc
 alias symbol:wimax_msg_alloc wimax
 alias symbol:drm_dp_dsc_sink_max_slice_count drm_kms_helper

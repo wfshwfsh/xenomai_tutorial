@@ -293,7 +293,8 @@ static unsigned int pl011_read(const struct rt_amba_uart_port *uap,
 	unsigned int reg)
 {
 	void __iomem *addr = uap->membase + pl011_reg_to_offset(uap, reg);
-
+    
+    pr_info("Read reg[%d] \n", reg);
 	return (uap->iotype == UPIO_MEM32) ?
 		readl_relaxed(addr) : readw_relaxed(addr);
 }
@@ -303,7 +304,7 @@ static void pl011_write(unsigned int val, const struct rt_amba_uart_port *uap,
 {
 	void __iomem *addr = uap->membase + pl011_reg_to_offset(uap, reg);
     
-    //pr_info("Writing to reg[%d], value: 0x%x\n", reg, val);
+    pr_info("Write reg[%d], value: 0x%x\n", reg, val);
     
 	if (uap->iotype == UPIO_MEM32)
 		writel_relaxed(val, addr);
@@ -582,8 +583,8 @@ static int rt_pl011_rx_chars(struct rt_amba_uart_ctx *ctx,
 	int lsr = 0;
     
     while(!(pl011_read(uap, REG_FR) & UART01x_FR_RXFE)){
-        rx = pl011_read(uap, REG_DR) | UART_DUMMY_DR_RX;
-                
+        rx = pl011_read(uap, REG_DR);
+        
         if (unlikely(rx & UART_DR_ERROR)) {
 			if (rx & UART011_DR_PE)
 				lsr |= RTSER_LSR_PARITY_ERR;
@@ -694,7 +695,7 @@ static int rt_pl011_int(rtdm_irq_t *irq_context)
     unsigned int status, pass_counter = AMBA_ISR_PASS_LIMIT;
     int ret = RTDM_IRQ_NONE;
     
-    rtdm_printk("%s", __func__);
+    rtdm_printk("%s enter", __func__);
     ctx = rtdm_irq_get_arg(irq_context, struct rt_amba_uart_ctx);
     uap = ctx->port;
     rtdm_lock_get(&ctx->lock);
@@ -708,7 +709,7 @@ static int rt_pl011_int(rtdm_irq_t *irq_context)
 					       UART011_RXIS), uap, REG_ICR);
 
 			if (status & (UART011_RTIS|UART011_RXIS)) {
-                rt_pl011_rx_chars(ctx, &timestamp);
+                rbytes = rt_pl011_rx_chars(ctx, &timestamp);
 				events |= RTSER_EVENT_RXPEND;
 			}
 			
@@ -730,6 +731,7 @@ static int rt_pl011_int(rtdm_irq_t *irq_context)
 		ret = RTDM_IRQ_HANDLED;
 	}
 	
+    rtdm_printk("%s nwait=%d, rbytes=%d\n", __func__, ctx->in_nwait, rbytes);
 	if (ctx->in_nwait > 0) {
 		if ((ctx->in_nwait <= rbytes) || ctx->status) {
 			ctx->in_nwait = 0;
@@ -741,7 +743,7 @@ static int rt_pl011_int(rtdm_irq_t *irq_context)
 
 	if (ctx->status) {
 		events |= RTSER_EVENT_ERRPEND;
-		ctx->ier_status &= ~IER_STAT;
+		//ctx->ier_status &= ~IER_STAT;
 	}
 
 	if (events & ctx->config.event_mask) {
@@ -756,7 +758,6 @@ static int rt_pl011_int(rtdm_irq_t *irq_context)
 
 	if ((ctx->ier_status & IER_TX) && (ctx->out_npend == 0)) {
 		rt_amba_uart_stop_tx(ctx);
-		
 		ctx->ier_status &= ~IER_TX;
 		rtdm_event_signal(&ctx->out_event);
 	}
@@ -765,6 +766,8 @@ static int rt_pl011_int(rtdm_irq_t *irq_context)
 	
 	if (ret != RTDM_IRQ_HANDLED)
 		pr_warn("%s: unhandled interrupt\n", __func__);
+    
+    rtdm_printk("%s leave", __func__);
 	return ret;
 }
 
@@ -909,7 +912,7 @@ static int rt_amba_uart_set_config(struct rt_amba_uart_ctx *ctx,
 				   RTSER_SET_HANDSHAKE)) {
 		
 		unsigned int lcr_h, old_cr;
-		unsigned int baud, quot, clkdiv;
+		unsigned int baud, quot;//, clkdiv;
 
 		//if (uap->vendor->oversampling)
 		//	clkdiv = 8;
@@ -1013,6 +1016,9 @@ static int rt_amba_uart_set_config(struct rt_amba_uart_ctx *ctx,
 		pl011_write(old_cr, uap, REG_CR);
 
 		//rtdm_lock_put_irqrestore(&ctx->lock, lock_ctx);
+        
+        ctx->status = 0;
+		ctx->ioc_events &= ~RTSER_EVENT_ERRPEND;
     }
     
 	rtdm_lock_put_irqrestore(&ctx->lock, lock_ctx);
@@ -1241,14 +1247,15 @@ ssize_t rt_pl011_uart_read(struct rtdm_fd *fd, void *buf, size_t nbyte)
 	ssize_t ret = -EAGAIN;	/* for non-blocking read */
 	int nonblocking;
     
-    rtdm_printk("%s", __FUNCTION__);
+    rtdm_printk("%s\n", __FUNCTION__);
 	if (nbyte == 0)
 		return 0;
 	
 	if (rtdm_fd_is_user(fd) && !rtdm_rw_user_ok(fd, buf, nbyte))
 		return -EFAULT;
 
-	ctx = rtdm_fd_to_private(fd);
+	rtdm_printk("%s:%d\n", __FUNCTION__, __LINE__);
+    ctx = rtdm_fd_to_private(fd);
 	rtdm_toseq_init(&timeout_seq, ctx->config.rx_timeout);
 
 	/* non-blocking is handled separately here */
@@ -1261,6 +1268,7 @@ ssize_t rt_pl011_uart_read(struct rtdm_fd *fd, void *buf, size_t nbyte)
     rtdm_lock_get_irqsave(&ctx->lock, lock_ctx);
     
     while (1) {
+        rtdm_printk("%s: 0x%02x\n", __FUNCTION__, ctx->status);
         if (ctx->status) {
 			if (ctx->status & RTSER_LSR_BREAK_IND)
 				ret = -EPIPE;
@@ -1273,6 +1281,7 @@ ssize_t rt_pl011_uart_read(struct rtdm_fd *fd, void *buf, size_t nbyte)
 			break;
 		}
         
+        rtdm_printk("%s:%d\n", __FUNCTION__, __LINE__);
         pending = ctx->in_npend;
         
         if (pending > 0) {
@@ -1338,7 +1347,11 @@ ssize_t rt_pl011_uart_read(struct rtdm_fd *fd, void *buf, size_t nbyte)
 			 * returned by rtdm_event_wait[_until]
 			 */
 			break;
-
+        
+        rtdm_printk("%s:%d\n", __FUNCTION__, __LINE__);
+        
+        rtdm_printk("timeout: %d", ctx->config.rx_timeout);
+        
 		ctx->in_nwait = nbyte;
 		rtdm_lock_put_irqrestore(&ctx->lock, lock_ctx);
 		ret = rtdm_event_timedwait(&ctx->in_event,
@@ -1524,7 +1537,7 @@ static int rt_pl011_probe(struct amba_device *dev, const struct amba_id *id)
 
 	portnr = pl011_find_free_port();
 	if (portnr < 0)
-		return portnr;
+		return -ENOMEM;
 
 	uap = devm_kzalloc(&dev->dev, sizeof(*uap), GFP_KERNEL);
 	if (!uap)
@@ -1638,7 +1651,7 @@ static int __init rt_pl011_uart_init(void)
 	int ret;
 	if (!rtdm_available())
 		return -ENODEV;
-
+    
     ret = amba_driver_register(&rt_pl011_uart_driver);
 	if (ret) {
 		pr_err("%s; Could not register  driver (err=%d)\n",

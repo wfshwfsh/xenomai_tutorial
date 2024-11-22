@@ -286,7 +286,8 @@ static unsigned int pl011_read(const struct uart_amba_port *uap,
 	unsigned int reg)
 {
 	void __iomem *addr = uap->port.membase + pl011_reg_to_offset(uap, reg);
-
+    
+    pr_info("Read reg[%d] 0x%04x\n", reg, (uap->port.iotype == UPIO_MEM32)? readl_relaxed(addr) : readw_relaxed(addr));
 	return (uap->port.iotype == UPIO_MEM32) ?
 		readl_relaxed(addr) : readw_relaxed(addr);
 }
@@ -295,7 +296,7 @@ static void pl011_write(unsigned int val, const struct uart_amba_port *uap,
 	unsigned int reg)
 {
 	void __iomem *addr = uap->port.membase + pl011_reg_to_offset(uap, reg);
-    pr_info("Writing to reg[%d], value: 0x%x\n", reg, val);
+    pr_info("Writing reg[%d], value: 0x%x\n", reg, val);
     
 	if (uap->port.iotype == UPIO_MEM32)
 		writel_relaxed(val, addr);
@@ -313,6 +314,7 @@ static int pl011_fifo_to_tty(struct uart_amba_port *uap)
 	unsigned int ch, flag, fifotaken;
 	int sysrq;
 	u16 status;
+    printk("%s - beg", __func__);
 
 	for (fifotaken = 0; fifotaken != 256; fifotaken++) {
 		status = pl011_read(uap, REG_FR);
@@ -354,7 +356,8 @@ static int pl011_fifo_to_tty(struct uart_amba_port *uap)
 		if (!sysrq)
 			uart_insert_char(&uap->port, ch, UART011_DR_OE, ch, flag);
 	}
-
+    
+    printk("%s - end", __func__);
 	return fifotaken;
 }
 
@@ -750,6 +753,7 @@ static inline void pl011_dma_tx_stop(struct uart_amba_port *uap)
 static inline bool pl011_dma_tx_start(struct uart_amba_port *uap)
 {
 	u16 dmacr;
+    printk("%s", __func__);
 
 	if (!uap->using_tx_dma)
 		return false;
@@ -1188,6 +1192,7 @@ skip_rx:
 
 static void pl011_dma_shutdown(struct uart_amba_port *uap)
 {
+    printk("%s", __func__);
 	if (!(uap->using_tx_dma || uap->using_rx_dma))
 		return;
 
@@ -1348,7 +1353,8 @@ static void pl011_stop_rx(struct uart_port *port)
 {
 	struct uart_amba_port *uap =
 	    container_of(port, struct uart_amba_port, port);
-
+    
+    printk("%s", __func__);
 	uap->im &= ~(UART011_RXIM|UART011_RTIM|UART011_FEIM|
 		     UART011_PEIM|UART011_BEIM|UART011_OEIM);
 	pl011_write(uap->im, uap, REG_IMSC);
@@ -1361,6 +1367,7 @@ static void pl011_enable_ms(struct uart_port *port)
 	struct uart_amba_port *uap =
 	    container_of(port, struct uart_amba_port, port);
 
+    printk("%s", __func__);
 	uap->im |= UART011_RIMIM|UART011_CTSMIM|UART011_DCDMIM|UART011_DSRMIM;
 	pl011_write(uap->im, uap, REG_IMSC);
 }
@@ -1369,6 +1376,7 @@ static void pl011_rx_chars(struct uart_amba_port *uap)
 __releases(&uap->port.lock)
 __acquires(&uap->port.lock)
 {
+    printk("%s - beg", __func__);
 	pl011_fifo_to_tty(uap);
 
 	uap->irq_locked = 0;
@@ -1398,11 +1406,13 @@ __acquires(&uap->port.lock)
 		}
 	}
 	spin_lock(&uap->port.lock);
+    printk("%s - end", __func__);
 }
 
 static bool pl011_tx_char(struct uart_amba_port *uap, unsigned char c,
 			  bool from_irq)
 {
+    printk("%s", __func__);
 	if (unlikely(!from_irq) &&
 	    pl011_read(uap, REG_FR) & UART01x_FR_TXFF)
 		return false; /* unable to transmit character */
@@ -1419,6 +1429,7 @@ static bool pl011_tx_chars(struct uart_amba_port *uap, bool from_irq)
 {
 	struct circ_buf *xmit = &uap->port.state->xmit;
 	int count = uap->fifosize >> 1;
+    printk("%s", __func__);
 
 	if (uap->port.x_char) {
 		if (!pl011_tx_char(uap, uap->port.x_char, from_irq))
@@ -1462,6 +1473,7 @@ static bool pl011_tx_chars(struct uart_amba_port *uap, bool from_irq)
 static void pl011_modem_status(struct uart_amba_port *uap)
 {
 	unsigned int status, delta;
+    printk("%s", __func__);
 
 	status = pl011_read(uap, REG_FR) & UART01x_FR_MODEM_ANY;
 
@@ -1488,7 +1500,8 @@ static void check_apply_cts_event_workaround(struct uart_amba_port *uap)
 {
 	if (!uap->vendor->cts_event_workaround)
 		return;
-
+    
+    printk("%s", __func__);
 	/* workaround to make sure that all bits are unlocked.. */
 	pl011_write(0x00, uap, REG_ICR);
 
@@ -1550,6 +1563,7 @@ static unsigned int pl011_tx_empty(struct uart_port *port)
 {
 	struct uart_amba_port *uap =
 	    container_of(port, struct uart_amba_port, port);
+    printk("%s", __func__);
 
 	/* Allow feature register bits to be inverted to work around errata */
 	unsigned int status = pl011_read(uap, REG_FR) ^ uap->vendor->inv_fr;
@@ -1560,6 +1574,7 @@ static unsigned int pl011_tx_empty(struct uart_port *port)
 
 static unsigned int pl011_get_mctrl(struct uart_port *port)
 {
+    printk("%s", __func__);
 	struct uart_amba_port *uap =
 	    container_of(port, struct uart_amba_port, port);
 	unsigned int result = 0;
@@ -1582,7 +1597,8 @@ static void pl011_set_mctrl(struct uart_port *port, unsigned int mctrl)
 	struct uart_amba_port *uap =
 	    container_of(port, struct uart_amba_port, port);
 	unsigned int cr;
-
+    
+    printk("%s", __func__);
 	cr = pl011_read(uap, REG_CR);
 
 #define	TIOCMBIT(tiocmbit, uartbit)		\
@@ -1612,6 +1628,7 @@ static void pl011_break_ctl(struct uart_port *port, int break_state)
 	    container_of(port, struct uart_amba_port, port);
 	unsigned long flags;
 	unsigned int lcr_h;
+    printk("%s", __func__);
 
 	spin_lock_irqsave(&uap->port.lock, flags);
 	lcr_h = pl011_read(uap, REG_LCRH_TX);
@@ -1653,6 +1670,7 @@ static int pl011_get_poll_char(struct uart_port *port)
 	struct uart_amba_port *uap =
 	    container_of(port, struct uart_amba_port, port);
 	unsigned int status;
+    printk("%s", __func__);
 
 	/*
 	 * The caller might need IRQs lowered, e.g. if used with KDB NMI
@@ -1672,6 +1690,7 @@ static void pl011_put_poll_char(struct uart_port *port,
 {
 	struct uart_amba_port *uap =
 	    container_of(port, struct uart_amba_port, port);
+    printk("%s", __func__);
 
 	while (pl011_read(uap, REG_FR) & UART01x_FR_TXFF)
 		cpu_relax();
@@ -1706,6 +1725,7 @@ static int pl011_hwinit(struct uart_port *port)
 
 	/* Optionaly enable pins to be muxed in and configured */
 	pinctrl_pm_select_default_state(port->dev);
+    printk("%s", __func__);
 
 	/*
 	 * Try to enable the clock producer.
@@ -1761,6 +1781,7 @@ static void pl011_write_lcr_h(struct uart_amba_port *uap, unsigned int lcr_h)
 
 static int pl011_allocate_irq(struct uart_amba_port *uap)
 {
+    printk("%s", __func__);
 	pl011_write(uap->im, uap, REG_IMSC);
 
 	return request_irq(uap->port.irq, pl011_int, IRQF_SHARED, "uart-pl011", uap);
@@ -1774,7 +1795,7 @@ static int pl011_allocate_irq(struct uart_amba_port *uap)
 static void pl011_enable_interrupts(struct uart_amba_port *uap)
 {
 	unsigned int i;
-
+    printk("%s", __func__);
 	spin_lock_irq(&uap->port.lock);
 
 	/* Clear out any spuriously appearing RX interrupts */
@@ -1806,6 +1827,7 @@ static int pl011_startup(struct uart_port *port)
 	    container_of(port, struct uart_amba_port, port);
 	unsigned int cr;
 	int retval;
+    printk("%s - beg", __func__);
 
 	retval = pl011_hwinit(port);
 	if (retval)
@@ -1835,7 +1857,8 @@ static int pl011_startup(struct uart_port *port)
 	pl011_dma_startup(uap);
 
 	pl011_enable_interrupts(uap);
-
+    
+    printk("%s - end", __func__);
 	return 0;
 
  clk_dis:
@@ -1883,7 +1906,8 @@ static void pl011_shutdown_channel(struct uart_amba_port *uap,
 static void pl011_disable_uart(struct uart_amba_port *uap)
 {
 	unsigned int cr;
-
+    printk("%s", __func__);
+    
 	uap->port.status &= ~(UPSTAT_AUTOCTS | UPSTAT_AUTORTS);
 	spin_lock_irq(&uap->port.lock);
 	cr = pl011_read(uap, REG_CR);
@@ -1903,6 +1927,7 @@ static void pl011_disable_uart(struct uart_amba_port *uap)
 
 static void pl011_disable_interrupts(struct uart_amba_port *uap)
 {
+    printk("%s", __func__);
 	spin_lock_irq(&uap->port.lock);
 
 	/* mask all interrupts and clear all pending ones */
@@ -1917,7 +1942,8 @@ static void pl011_shutdown(struct uart_port *port)
 {
 	struct uart_amba_port *uap =
 		container_of(port, struct uart_amba_port, port);
-
+    
+    printk("%s", __func__);
 	pl011_disable_interrupts(uap);
 
 	pl011_dma_shutdown(uap);
@@ -1999,6 +2025,7 @@ pl011_set_termios(struct uart_port *port, struct ktermios *termios,
 	unsigned int lcr_h, old_cr;
 	unsigned long flags;
 	unsigned int baud, quot, clkdiv;
+    printk("%s - enter", __func__);
 
 	if (uap->vendor->oversampling)
 		clkdiv = 8;
@@ -2109,6 +2136,7 @@ pl011_set_termios(struct uart_port *port, struct ktermios *termios,
 	pl011_write(old_cr, uap, REG_CR);
 
 	spin_unlock_irqrestore(&port->lock, flags);
+    printk("%s - leave", __func__);
 }
 
 static void
@@ -2227,6 +2255,7 @@ static void pl011_console_putchar(struct uart_port *port, int ch)
 {
 	struct uart_amba_port *uap =
 	    container_of(port, struct uart_amba_port, port);
+    printk("%s", __func__);
 
 	while (pl011_read(uap, REG_FR) & UART01x_FR_TXFF)
 		cpu_relax();
@@ -2240,6 +2269,7 @@ pl011_console_write(struct console *co, const char *s, unsigned int count)
 	unsigned int old_cr = 0, new_cr;
 	unsigned long flags;
 	int locked = 1;
+    printk("%s", __func__);
 
 	clk_enable(uap->clk);
 

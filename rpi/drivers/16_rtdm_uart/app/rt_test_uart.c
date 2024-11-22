@@ -31,7 +31,7 @@ static const struct rtser_config read_config = {
 	.fifo_depth        = RTSER_DEF_FIFO_DEPTH,
 	.rx_timeout        = RTSER_DEF_TIMEOUT,
 	.tx_timeout        = RTSER_DEF_TIMEOUT,
-	.event_timeout     = 1000000000, /* 1 s */
+	.event_timeout     = 1000000, /* 1 s */
 	.timestamp_history = RTSER_RX_TIMESTAMP_HISTORY,
 	.event_mask        = RTSER_EVENT_RXPEND,
 };
@@ -51,36 +51,38 @@ static const struct rtser_config write_config = {
 	/* the rest implicitly remains default */
 };
 
-int read_fd  = -1;
-int write_fd = -1;
+int uart_fd  = -1;
 int ret;
 
+#define YES 'y'
 
 int main (int argc, char *argv[])
 {
+    char input;
     int i, ret, tx_val=0,rx_val=0;
-    unsigned char txbuf[]={0x31,0x32,0x33,0x61,0x62,0x63}, rxbuf[256]={0};
+    unsigned char txbuf[]={0x31,0x32,0x33,0x61,0x62,0x63}, rxbuf[6]={0};
     unsigned char *tx_ptr=txbuf;
     
 	/* open rtser0 */
-	write_fd = open(WRITE_FILE, 0);
-	if (write_fd < 0) {
+	uart_fd = open(WRITE_FILE, 0);
+	if (uart_fd < 0) {
 		printf("can't open %s, error: %s \n", WRITE_FILE, strerror(errno));
 		return 0;
 	}
     
-#if 0
+
 	/* writing write-config */
-	ret = ioctl(write_fd, RTSER_RTIOC_SET_CONFIG, &write_config);
+	ret = ioctl(uart_fd, RTSER_RTIOC_SET_CONFIG, &read_config);
 	if (ret) {
 		printf("error while RTSER_RTIOC_SET_CONFIG: %s\n", strerror(errno));
 		goto error;
 	}
 	printf("write-config written \n");
-    
+
+#if 1    
     //for(i=0;i<sizeof(txbuf);i++){
-    //    ret = rt_dev_write(write_fd, tx_ptr++, 1);
-    ret = rt_dev_write(write_fd, txbuf, sizeof(txbuf));
+    //    ret = rt_dev_write(uart_fd, tx_ptr++, 1);
+    ret = rt_dev_write(uart_fd, txbuf, sizeof(txbuf));
         if(ret < 0) {
             printf("failed to write data \n");
         }
@@ -88,9 +90,13 @@ int main (int argc, char *argv[])
 #endif
 
 #if 1
-    ret = rt_dev_read(read_fd, rxbuf, sizeof(rxbuf));
+    do {
+    //    input = getchar(); // 获取用户输入的字符
+    //} while (input != YES);
+    
+    ret = rt_dev_read(uart_fd, rxbuf, sizeof(rxbuf));
     if(ret < 0) {
-        printf("failed to read data\n");
+        printf("failed to read data: %s\n", strerror(errno));
     } else {
         printf("RX: \n");
         for(i=0;i<ret;i++){
@@ -98,12 +104,13 @@ int main (int argc, char *argv[])
         }
         printf("\n\n");
     }
+    } while (input != YES);
 #endif
 
 error:
     /* close the device */
-    if(write_fd > 0) {
-        ret = close(write_fd);
+    if(uart_fd > 0) {
+        ret = close(uart_fd);
         if (ret < 0) {
             rt_printf("ERROR : can't open device (%s)\n", strerror(-ret));
             fflush(stdout);
@@ -111,14 +118,5 @@ error:
         }
     }
     
-    if(read_fd > 0) {
-        ret = close(read_fd);
-        if (ret < 0) {
-            rt_printf("ERROR : can't open device (%s)\n", strerror(-ret));
-            fflush(stdout);
-            return ret;
-        }
-    }
-
     return 0;
 }

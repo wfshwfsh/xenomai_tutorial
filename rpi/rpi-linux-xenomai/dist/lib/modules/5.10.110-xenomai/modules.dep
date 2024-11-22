@@ -1109,8 +1109,6 @@ kernel/drivers/staging/fbtft/fb_upd161704.ko: kernel/drivers/staging/fbtft/fbtft
 kernel/drivers/staging/fbtft/fb_watterott.ko: kernel/drivers/staging/fbtft/fbtft.ko kernel/drivers/video/fbdev/core/syscopyarea.ko kernel/drivers/video/fbdev/core/sysfillrect.ko kernel/drivers/video/fbdev/core/sysimgblt.ko kernel/drivers/video/fbdev/core/fb_sys_fops.ko kernel/drivers/video/backlight/backlight.ko
 kernel/drivers/extcon/extcon-arizona.ko: kernel/sound/soc/snd-soc-core.ko kernel/sound/core/snd-compress.ko kernel/sound/core/snd-pcm-dmaengine.ko kernel/sound/core/snd-pcm.ko kernel/sound/core/snd-timer.ko kernel/sound/core/snd.ko
 kernel/drivers/perf/raspberrypi_axi_monitor.ko:
-kernel/drivers/nvmem/nvmem-rmem.ko:
-kernel/drivers/xenomai/testing/xeno_rtdmtest.ko:
 kernel/drivers/connector/cn.ko:
 kernel/drivers/ata/libata.ko:
 kernel/drivers/ata/ahci.ko: kernel/drivers/ata/libahci.ko kernel/drivers/ata/libata.ko
