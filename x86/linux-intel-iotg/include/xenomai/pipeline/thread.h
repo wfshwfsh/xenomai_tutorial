@@ -1,0 +1,1 @@
+/home/adv/git/xenomai3_x86_iotg/xenomai/include/cobalt/kernel/dovetail/pipeline/thread.h

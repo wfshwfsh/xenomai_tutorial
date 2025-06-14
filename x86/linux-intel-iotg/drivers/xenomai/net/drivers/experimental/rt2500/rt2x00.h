@@ -1,0 +1,1 @@
+/home/adv/git/xenomai3_x86_iotg/xenomai/kernel/drivers/net/drivers/experimental/rt2500/rt2x00.h

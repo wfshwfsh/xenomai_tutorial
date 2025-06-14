@@ -1,0 +1,1 @@
+/home/adv/git/xenomai3_x86_iotg/xenomai/kernel/drivers/can/mscan/rtcan_mscan_regs.h

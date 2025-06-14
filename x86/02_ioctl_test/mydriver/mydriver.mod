@@ -1,2 +1,0 @@
-/home/adv/git/xenomai/02_ioctl_test/mydriver/mydriver.o
-
