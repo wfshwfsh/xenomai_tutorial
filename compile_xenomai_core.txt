@@ -1,0 +1,604 @@
+  273  cd git/
+  274  ls
+  275  git clone https://github.com/wfshwfsh/xenomai_tutorial.git
+  276  cd xenomai_tutorial/
+  277  l
+  278  cd x86/
+  279  l
+  280  cd ..
+  281  sudo apt install tree
+  282  ls
+  283  tree -L 2
+  284  cd x86/
+  285  mkdir drivers
+  286  ls
+  287  mv 0* drivers/
+  288  ls
+  289  tree
+  290  ls
+  291  cd drivers/
+  292  cd ..
+  293  ls
+  294  cd ..
+  295  ls
+  296  tree -L2
+  297  tree -L 2
+  298  tree -L 3
+  299  cd x86/
+  300  ls
+  301  git clone git clone https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
+  302  git clone https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
+  303  ls
+  304  cd ..
+  305  tree -L2
+  306  tree -L 2
+  307  cd x86/linux/
+  308  git status 
+  309  git log
+  310  git branch 
+  311  git branch -a
+  312  git tag
+  313  git tag -l
+  314  git checkout v5.10-rc4
+  315  git log
+  316  :q
+  317  git checkout v5.15-rc3
+  318  git log
+  319  cd
+  320  wget https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.15.9.tar.xz
+  321  l
+  322  tar xvf linux-5.15.9.tar.xz 
+  323  cd linux-5.15.9/
+  324  ls
+  325  git branch 
+  326  ls
+  327  cd ..
+  328  cd git/xenomai_tutorial/
+  329  ls
+  330  cd x86/
+  331  ls
+  332  rm -rf linux/
+  333  mv ~/linux-5.15.9 ./
+  334  ls
+  335  cd ../../
+  336  git clone git@github.com:wfshwfsh/xenomai3_x86_iotg.git
+  337  ls
+  338  l
+  339  scd xenomai_tutorial/
+  340  ls
+  341  cd xenomai_tutorial/x86/
+  342  ls
+  343  cd linux-5.15.9/
+  344  ls
+  345  cp -r  ~/git/xenomai3_x86_iotg/linux-intel-iotg/ ./
+  346  ls
+  347  cd ..
+  348  mv linux-5.15.9/linux-intel-iotg/ ./
+  349  ls
+  350  ls -l
+  351  l
+  352  cp -r ~/git/xenomai3_x86_iotg/dovetail/ ./
+  353  ls
+  354  ls dovetail/
+  355  cd dovetail/
+  356  ls
+  357  bzip2 --help
+  358  bzip2 -d patch-5.15.9-dovetail1.patch.bz2 
+  359  ls
+  360  diff patch-5.15.9-dovetail1.patch patch-5.15.9-dovetail1-ok.patch 
+  361  ls
+  362  cd ..
+  363  ls
+  364  cd ..
+  365  git status 
+  366  cd x86/drivers/02_ioctl_test/
+  367  make cl
+  368  make clean
+  369  sudo apt install make
+  370  make
+  371  ls
+  372  cd mydriver/
+  373  ls
+  374  make clean 
+  375  ls
+  376  cd ../../
+  377  cd ..
+  378  git status 
+  379  git add -A
+  380  git commit -m "update x86 linux kernel source code"
+  381  git config --global user.name "Will8.Chen"
+  382  git config --global user.email "Will8.Chen@advantech.com.tw"
+  383  git commit -m "update x86 linux kernel source code"
+  384  git status 
+  385  git push origin main 
+  386  ls
+  387  mkdir igh_ecat
+  388  cd 
+  389  ls
+  390  cd go
+  391  cd git/
+  392  ls
+  393  git clone git@gitlab.com:etherlab.org/ethercat.git
+  394  git clone https://gitlab.com/etherlab.org/ethercat.git
+  395  ls
+  396  cat git.txt 
+  397  ls
+  398  cd ethercat/
+  399  ls
+  400  cd ..
+  401  ls
+  402  cd xenomai_tutorial/
+  403  ls
+  404  cd igh_ecat/
+  405  ls
+  406  cp -r ~/git/ethercat/* ./
+  407  ls
+  408  cd
+  409  poweroff 
+  410  sudo poweroff 
+  411  ifconfig 
+  412  cd git/
+  413  ls
+  414  cd git/xenomai_tutorial/
+  415  ls
+  416  cd x86/linux-5.15.9/
+  417  ls
+  418  ls -l
+  419  cd ..
+  420  cd linux-intel-iotg/
+  421  cd -
+  422  cd linux-5.15.9/
+  423  ls
+  424  cp /boot/config-5.15.0-1040-intel-iotg config_ok
+  425  mv config_ok config_intel_iotg
+  426  cp config_intel_iotg .config
+  427  make menuconfig
+  428  gcc -V
+  429  sudo apt install gcc
+  430  make menuconfig
+  431  sudo apt install pkg-config 
+  432  make menuconfig
+  433  sudo apt install libncurses-dev 
+  434  make menuconfig
+  435  sudo apt install libncurses-dev flex
+  436  make menuconfig
+  437  sudo apt install libncurses-dev flex bison
+  438  make menuconfig
+  439  make -j$(nproc)
+  440  sudo apt install libncurses-dev flex bison libelf-dev 
+  441  make -j$(nproc)
+  442  sudo apt install libncurses-dev flex bison libelf-dev libssl-dev 
+  443  make -j$(nproc)
+  444  vim .config
+  445  make -j$(nproc)
+  446  scripts/config --disable SYSTEM_REVOCATION_KEYS
+  447  scripts/config --disable SYSTEM_TRUSTED_KEYS
+  448  vim .config
+  449  history 
+  450  make -j$(nproc)
+  451  scripts/config --disable SYSTEM_TRUSTED_KEYS
+  452  make -j$(nproc)
+  453  scripts/config --disable SYSTEM_TRUSTED_KEYS
+  454  vim config_intel_iotg 
+  455  vim .config
+  456  make -j$(nproc)
+  457  df
+  458  sudo apt-get install dwarves
+  459  pahole --version
+  460  make -j$(nproc)
+  461  vim scripts/pahole-flags.sh
+  462  make -j$(nproc)
+  463  history 
+  464  sudo apt install libncurses-dev flex bison libelf-dev libssl-dev build-essential 
+  465  make -j$(nproc)
+  466  pahole --version
+  467  vim .config
+  468  make -j$(nproc)
+  469  make -j$(nproc) menuconfig
+  470  make -j$(nproc)
+  471  cd git/xenomai_tutorial/
+  472  ls
+  473  cd x86/
+  474  ls
+  475  cd linux-5.15.9/
+  476  make -j$(nproc)
+  477  cd ..
+  478  ls
+  479  git status 
+  480  rm linux-5.15.9/scripts/pahole-flags.sh 
+  481  ls
+  482  cd linux-intel-iotg/
+  483  make menuconfig
+  484  cp ~/git/xenomai3_x86_iotg/config_ok_iotg ./
+  485  vim config_ok_iotg 
+  486  make -j$(nproc) menuconfig
+  487  cp config_ok_iotg .config 
+  488  make -j$(nproc) menuconfig
+  489  make -j$(nproc) 
+  490  cd git/xenomai_tutorial/
+  491  cd x86/
+  492  ls
+  493  cd linux-intel-iotg/
+  494  ls
+  495  make -j$(nproc) 
+  496  vim .config 
+  497  vim scripts/pahole-flags.sh 
+  498  make -j$(nproc) 
+  499  make -j$(nproc) menuconfig
+  500  make -j$(nproc) 
+  501  make -j$(nproc) menuconfig
+  502  vim .config 
+  503  make -j$(nproc) menuconfig
+  504  make -j$(nproc) 
+  505  cd git/xenomai_tutorial/x86/
+  506  make -j$(nproc) 
+  507  cd linux-intel-iotg/
+  508  make -j$(nproc) 
+  509  cd git/xenomai_tutorial/
+  510  ls
+  511  cd x86/linux-5.15.9/
+  512  ls
+  513  make -j$(nproc)
+  514  df
+  515  make -j$(nproc)
+  516  BTGdd
+  517  make -j$(nproc)
+  518  ls
+  519  ifconfig 
+  520  cd 
+  521  cd -
+  522  ls
+  523  cd ..
+  524  ls
+  525  cd -
+  526  cp .config config_intel_iotg_ok
+  527  cd ..
+  528  ls
+  529  cd drivers/
+  530  ls
+  531  cd ..
+  532  ls
+  533  cd linux-intel-iotg/
+  534  ls
+  535  make menuconfig -j$(nproc)
+  536  cd 
+  537  cd -
+  538  reboot 
+  539  poweroff 
+  540  sudo poweroff 
+  541  sudo dmesg |tail
+  542  cd git/xenomai_tutorial/x86/linux-intel-iotg/
+  543  ls
+  544  make -j$(nproc) 
+  545  l
+  546  cd arch/x86_64/boot/
+  547  l
+  548  cd -
+  549  poweroff 
+  550  cd git/xenomai_tutorial/x86/linux-xenomai-iotg/
+  551  ls
+  552  cd ..
+  553  cd igh_ecat/
+  554  ls
+  555  ./bootstrap 
+  556  ls
+  557  ./bootstrap 
+  558  sudo apt-get install libtool
+  559  ./bootstrap 
+  560  cd ..
+  561  git status 
+  562  cd igh_ecat/
+  563  make clean
+  564  ls
+  565  cd ..
+  566  rm -r igh_ecat/
+  567  cp -r ../nxp/igh_ecat/ ./
+  568  git add -A
+  569  git commit -m "update for compile linux-xenomai-iotg ok, igh basic code"
+  570  git push origin main 
+  571  cd igh_ecat/
+  572  ./bootstrap 
+  573  ls
+  574  ifconfig 
+  575  lsmod 
+  576  lsmod e1000
+  577  lsmod |grep e1000
+  578  lsmod |grep rt
+  579  lsmod |grep rtk
+  580  lsmod |grep net
+  581  lsmod |grep ip
+  582  lsmod |grep igb
+  583  sudo rmmod igb
+  584  cd git/xenomai_tutorial/
+  585  ls
+  586  cd x86/
+  587  ls
+  588  git status 
+  589  ls
+  590  mv linux-intel-iotg/ linux-xenomai-iotg
+  591  ls
+  592  cd dovetail/
+  593  ls
+  594  cd ..
+  595  ls
+  596  cd linux-5.15.9/
+  597  ls
+  598  cd ..
+  599  ls
+  600  git status 
+  601  cd ..
+  602  git status 
+  603  ls
+  604  cd imx/
+  605  ls
+  606  cd ..
+  607  ls
+  608  cd rpi/
+  609  ls
+  610  cd ..
+  611  ls
+  612  cp -r igh_ecat/ x86/
+  613  ls
+  614  mkdir nxp
+  615  mv igh_ecat/ nxp/
+  616  ls
+  617  cd nxp/
+  618  ls
+  619  cd ..
+  620  ls
+  621  cd x86/
+  622  ls
+  623  cd linux-xenomai-iotg/
+  624  ls
+  625  make -j$(nproc)
+  626  [A
+  627  make -j$(nproc)
+  628  ls
+  629  cd ..
+  630  ls
+  631  cd igh_ecat/
+  632  ./bootstrap 
+  633  autoreconf
+  634  sudo apt install autoconf
+  635  ./bootstrap 
+  636  ifconfig 
+  637  reboot 
+  638  sudo rmmod e1000e
+  639  ifconfig 
+  640  reboot 
+  641  cd git/xenomai_tutorial/
+  642  git status 
+  643  sudo poweroff 
+  644  cd git/xenomai_tutorial/
+  645  ls
+  646  cd x86/
+  647  l
+  648  cd linux-xenomai-iotg/
+  649  ls
+  650  make -j$(nproc) install INSTALL_PATH=~/git/xenomai_tutorial/x86/tmp_boot
+  651  make -j$(nproc) modules_install INSTALL_MOD_PATH=~/git/xenomai_tutorial/x86/tmp_driver
+  652  cd ..
+  653  ls
+  654  cd -
+  655  make -j$(nproc) modules_install INSTALL_MOD_PATH=~/git/xenomai_tutorial/x86/tmp_boot/
+  656  cd ..
+  657  ls
+  658  rm -r tmp_driver/
+  659  cd tmp_boot/
+  660  ls
+  661  mkdir boot
+  662  mv config-5.15.30-xenomai boot/
+  663  mv System.map-5.15.30-xenomai boot/
+  664  mv vmlinuz-5.15.30-xenomai boot/
+  665  ls
+  666  ls -l /boot/
+  667  ls 
+  668  ls boot/
+  669  ls
+  670  cd boot/
+  671  ls
+  672  tree -L 2
+  673  cd ..
+  674  tree -L 2
+  675  tree -L 3
+  676  tree -L 4
+  677  tree -L 3
+  678  ls
+  679  sudo vim /etc/grub.d/40_custom 
+  680  blkid 
+  681  sudo vim /etc/grub.d/40_custom 
+  682  sudo update-grub
+  683  sudo reboot 
+  684  cd git/xenomai_tutorial/
+  685  ls
+  686  cd
+  687  cd -
+  688  cd x86/
+  689  ls
+  690  cd linux-xenomai-iotg/
+  691  ls
+  692  git status 
+  693  cd ..
+  694  cd igh_ecat/
+  695  ls
+  696  cd ..
+  697  ls
+  698  cd ..
+  699  ls
+  700  cd -
+  701  ls
+  702  git pull origin main 
+  703  git status 
+  704  cp /media/adv/F2F1-F7F3/ECAT/build_ecat.sh ./
+  705  vim /media/adv/F2F1-F7F3/ECAT/ethercat.conf 
+  706  ifconfig 
+  707  vim /media/adv/F2F1-F7F3/ECAT/ethercat.conf 
+  708  lsmod |grep e1000
+  709  lsmod |grep igb
+  710  sudo rmmod e1000e 
+  711  ifconfig 
+  712  cd igh_ecat/
+  713  ls
+  714  cd ..
+  715  ls
+  716  vim igh_ecat/
+  717  vim build_ecat.sh 
+  718  chmod +x
+  719  chmod +x build_ecat.sh 
+  720  vim build_ecat.sh 
+  721  cd linux-
+  722  cd linux-xenomai-iotg/
+  723  ls
+  724  make -j$(nproc)
+  725  make -j$(nproc) menuconfig
+  726  make -j$(nproc)
+  727  ls
+  728  git status 
+  729  ls
+  730  ls -l /boot/vmlinuz 
+  731  cd ..
+  732  ls
+  733  mkdir tmp_boot
+  734  cd linux-xenomai-iotg/
+  735  cd ..
+  736  mv tmp_boot/ my_kernal
+  737  mv my_kernal/ my_kernel/
+  738  cd my_kernel/
+  739  ls
+  740  sudo cp boot/* /boot/
+  741  sudo cp -r lib/modules/5.15.30-xenomai/ /lib/modules/
+  742  ls
+  743  tree -L 2
+  744  cd git/xenomai_tutorial/
+  745  ls
+  746  cd x86/
+  747  ls
+  748  cd my_kernel/
+  749  ls
+  750  sudo apt install terminator
+  751  cd /boot/
+  752  ls
+  753  sudo vim /etc/grub.d/40_custom 
+  754  sudo vim /boot/grub/grub.cfg 
+  755  sudo vim /etc/grub.d/91_advRescue 
+  756  sudo vim /etc/grub.d/10_linux
+  757  sudo vim /etc/grub.d/
+  758  sudo vim /etc/grub.d/41_custom 
+  759  sudo vim /etc/grub.d/10_linux
+  760  ls
+  761  cd git/xenomai_tutorial/x86/
+  762  ls
+  763  cd my_kernel/
+  764  ls
+  765  cd boot/
+  766  ls
+  767  sudo vim /etc/grub.d/40_custom 
+  768  sudo update-grub
+  769  vim /boot/grub/grub.cfg 
+  770  sudo reboot 
+  771  ls
+  772  cd 
+  773  sudo vim /etc/grub.d/40_custom 
+  774  sudo update-grub
+  775  reboot 
+  776  cd /boot/
+  777  ls
+  778  cd /boot/
+  779  ls -la
+  780  ls -l
+  781  cat /boot/grub/grub.cfg 
+  782  ls /lib/modules/5.15.0-1040-intel-iotg/ -l
+  783  lsblk -o NAME, UUID
+  784  lsblk -o NAME,UUID
+  785  lsblk -o NAME,UUID,PARTUUID
+  786  sudo rm /etc/grub.d/91_advRescue 
+  787  cd linux-xenomai-iotg/
+  788  ls
+  789  mkinitramfs --help
+  790  mkinitramfs -o ../my_kernel/boot/initrd.img-5.15.30-xenomai 5.15.30-xenomai
+  791  cd ../my_kernel/
+  792  ls
+  793  cd boot/
+  794  ls
+  795  sudo cp initrd.img-5.15.30-xenomai /boot/
+  796  cd git/
+  797  ls
+  798  cd xenomai_tutorial/
+  799  cd x86/
+  800  sudo vim /boot/grub/grub.cfg 
+  801  sudo vim /etc/grub.d/40_custom 
+  802  sudo update-grub
+  803  sudo reboot 
+  804  cd git/xenomai_tutorial/
+  805  git push origin main 
+  806  cd xenomai/
+  807  ./scripts/bootstrap 
+  808  grep version-label configure.ac
+  809  vim configure.ac
+  810  autoupdate 
+  811  ./scripts/bootstrap 
+  812  ./configure --with-core=cobalt --enable-smp --enable-pshared
+  813  make -j$(nproc)
+  814  ls
+  815  ./configure --with-core=cobalt --enable-smp --enable-pshared --prefix=~/git/xenomai_tutorial/x86/my_kernel/
+  816  ./configure --with-core=cobalt --enable-smp --enable-pshared --prefix=/home/adv/git/xenomai_tutorial/x86/my_kernel/
+  817  make -j$(nproc)
+  818  make install
+  819  cd ../x86/my_kernel/
+  820  ls
+  821  mkdir xenomai-install
+  822  mv bin/ xenomai-install/
+  823  mv etc/ xenomai-install/
+  824  mv demo/ xenomai-install/
+  825  ls
+  826  mv include/ xenomai-install/
+  827  mv share/ xenomai-install/
+  828  mv sbin/ xenomai-install/
+  829  ls
+  830  tree -L 3
+  831  tree -L 2
+  832  tree -L 1
+  833  cd ..
+  834  cd -
+  835  tree -L 2
+  836  cd xenomai-install/
+  837  mkdir lib
+  838  cd ..
+  839  ls
+  840  mv lib/lib* xenomai-install/lib/
+  841  ls
+  842  ls lib/
+  843  mv lib/cobalt.wrappers xenomai-install/lib/
+  844  mv lib/modechk.wrappers xenomai-install/lib/
+  845  mv lib/dynlist.ld xenomai-install/lib/
+  846  ls lib/
+  847  cd lib/
+  848  ls
+  849  cd xenomai/
+  850  ls
+  851  cd ..
+  852  mv xenomai/ ../xenomai-install/lib/
+  853  cd ..
+  854  cd xenomai/
+  855  ./configure --with-core=cobalt --enable-smp --enable-pshared --prefix=/home/adv/git/xenomai_tutorial/x86/my_kernel/xenomai-install
+  856  cd ..
+  857  cd x86/my_kernel/
+  858  ls
+  859  cd xenomai-install/
+  860  ls
+  861  sudo mkdir /usr/xenomai
+  862  sudo cp -r ./* /usr/xenomai/
+  863  cd /usr/xenomai/
+  864  ls
+  865  cd demo/
+  866  ls
+  867  sudo ./altency 
+  868  sudo vim /etc/ld.so.conf.d/xenomai.conf
+  869  sudo ldconfig
+  870  sudo ./altency 
+  871  cd
+  872  ls
+  873  cd git/xenomai_tutorial/
+  874  ls
+  875  history 
+  876  history > compile_xenomai_core.txt
