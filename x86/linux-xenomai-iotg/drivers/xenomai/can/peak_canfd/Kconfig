@@ -1,1 +1,6 @@
-/home/adv/git/xenomai3_x86_iotg/xenomai/kernel/drivers/can/peak_canfd/Kconfig
+config XENO_DRIVERS_CAN_PEAK_CANFD
+	depends on XENO_DRIVERS_CAN && PCI && !XENO_DRIVERS_CAN_CALC_BITTIME_OLD
+	tristate "PEAK driver for PCAN-PCIe FD family"
+	help
+
+	This driver supports the PCAN-PCIe FD boards family from PEAK-System.

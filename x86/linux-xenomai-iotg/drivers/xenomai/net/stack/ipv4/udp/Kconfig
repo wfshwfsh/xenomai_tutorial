@@ -1,1 +1,6 @@
-/home/adv/git/xenomai3_x86_iotg/xenomai/kernel/drivers/net/stack/ipv4/udp/Kconfig
+config XENO_DRIVERS_NET_RTIPV4_UDP
+    tristate "UDP support"
+    depends on XENO_DRIVERS_NET_RTIPV4
+    default y
+    help
+    Enables UDP support of the RTnet Real-Time IPv4 protocol.
