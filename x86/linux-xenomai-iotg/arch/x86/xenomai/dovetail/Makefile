@@ -1,1 +1,5 @@
-/home/adv/git/xenomai3_x86_iotg/xenomai/kernel/cobalt/arch/x86/dovetail/Makefile
+
+obj-$(CONFIG_XENOMAI) += xenomai.o
+xenomai-y := machine.o smi.o c1e.o
+
+ccflags-y := -I$(srctree)/arch/x86/xenomai/include -I$(srctree)/include/xenomai

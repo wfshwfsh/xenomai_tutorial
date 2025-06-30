@@ -1,1 +1,5 @@
-/home/adv/git/xenomai3_x86_iotg/xenomai/kernel/cobalt/dovetail/Makefile
+ccflags-y += -I$(srctree)/kernel
+
+obj-y +=	pipeline.o
+
+pipeline-y :=	init.o kevents.o sched.o tick.o syscall.o intr.o

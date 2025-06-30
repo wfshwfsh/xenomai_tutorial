@@ -1,1 +1,1 @@
-/home/adv/git/xenomai3_x86_iotg/xenomai/kernel/drivers/net/Makefile
+obj-$(CONFIG_XENO_DRIVERS_NET) += stack/ drivers/ addons/

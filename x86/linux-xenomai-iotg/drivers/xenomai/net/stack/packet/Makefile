@@ -1,1 +1,5 @@
-/home/adv/git/xenomai3_x86_iotg/xenomai/kernel/drivers/net/stack/packet/Makefile
+ccflags-y += -I$(srctree)/drivers/xenomai/net/stack/include
+
+obj-$(CONFIG_XENO_DRIVERS_NET_RTPACKET) += rtpacket.o
+
+rtpacket-y := af_packet.o

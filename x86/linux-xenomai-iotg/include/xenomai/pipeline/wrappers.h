@@ -1,1 +1,9 @@
-/home/adv/git/xenomai3_x86_iotg/xenomai/include/cobalt/kernel/dovetail/pipeline/wrappers.h
+/*
+ * SPDX-License-Identifier: GPL-2.0
+ */
+#ifndef _COBALT_KERNEL_DOVETAIL_WRAPPERS_H
+#define _COBALT_KERNEL_DOVETAIL_WRAPPERS_H
+
+/* No wrapper needed so far. */
+
+#endif /* !_COBALT_KERNEL_DOVETAIL_WRAPPERS_H */
