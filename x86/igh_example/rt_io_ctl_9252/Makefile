@@ -4,7 +4,7 @@ PATH_XENO = /usr/xenomai
 
 XENO_CONFIG := $(PATH_XENO)/bin/xeno-config
 #INSTALL_ECAT = /usr/etherlab
-INSTALL_ECAT = /usr/local/ethercat
+INSTALL_ECAT = /usr/local
 
 CFLAGS := $(shell $(XENO_CONFIG) --skin=alchemy --cflags)
 LDFLAGS := $(shell $(XENO_CONFIG) --skin=alchemy --ldflags)

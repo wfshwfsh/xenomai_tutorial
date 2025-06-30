@@ -14,9 +14,10 @@ cd $DIR_ECAT
 autoupdate
 ./bootstrap
 
-configure_option="--enable-wildcards=yes --disable-eoe --enable-generic --disable-8139too --enable-igb --enable-e1000e --enable-rtdm=yes --with-xenomai-dir=/usr/xenomai"
-configure_cmd="./configure --with-linux-dir=$DIR_LINUX --with-module-dir=/kernel/drivers/ethercat"
-configure_cmd="$configure_cmd $configure_option"
+configure_option="--enable-wildcards=yes --disable-generic --disable-8139too --enable-igb --enable-e1000e"
+configure_option2="--enable-rtdm=yes --with-xenomai-dir=/usr/xenomai"
+configure_cmd="./configure --prefix=/usr/local --with-linux-dir=$DIR_LINUX --with-module-dir=/kernel/drivers/ethercat"
+configure_cmd="$configure_cmd $configure_option $configure_option2"
 
 echo "pwd: $PWD"
 echo "configure_cmd: $configure_cmd"
