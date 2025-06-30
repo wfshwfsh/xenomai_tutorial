@@ -12,3 +12,6 @@
 Module*.symvers 
 Module.markers 
 modules.order
+
+*.app
+

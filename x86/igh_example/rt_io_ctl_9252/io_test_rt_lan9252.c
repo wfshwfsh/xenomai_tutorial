@@ -241,8 +241,8 @@ void periodic_task2(void *arg)
 
 void periodic_task (void *arg) {
         int err;
-	//long task_period = (long*)arg;
-	long task_period = 1000000;
+	long task_period = (long*)arg;
+	//long task_period = 1000000;
 	rt_printf("task_period = %ld \n", task_period);
 	static int led_on = 0;
 	RTIME ticks;

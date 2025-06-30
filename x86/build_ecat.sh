@@ -14,7 +14,7 @@ cd $DIR_ECAT
 autoupdate
 ./bootstrap
 
-configure_option="--enable-wildcards=yes --disable-generic --disable-8139too --enable-igb --enable-e1000e"
+configure_option="--enable-wildcards=yes --disable-generic --disable-8139too --enable-igb --enable-igc --enable-e1000e"
 configure_option2="--enable-rtdm=yes --with-xenomai-dir=/usr/xenomai"
 configure_cmd="./configure --prefix=/usr/local --with-linux-dir=$DIR_LINUX --with-module-dir=/kernel/drivers/ethercat"
 configure_cmd="$configure_cmd $configure_option $configure_option2"
